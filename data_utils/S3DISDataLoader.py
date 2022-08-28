@@ -171,7 +171,7 @@ class ScannetDatasetWholeScene():
         return len(self.scene_points_list)
 
 if __name__ == '__main__':
-    data_root = '/data/yxu/PointNonLocal/data/stanford_indoor3d/'
+    data_root = '..\\data\\s3dis\\Stanford3dDataset_v1.2_Aligned_Version\\'
     num_point, test_area, block_size, sample_rate = 4096, 5, 1.0, 0.01
 
     point_data = S3DISDataset(split='train', data_root=data_root, num_point=num_point, test_area=test_area, block_size=block_size, sample_rate=sample_rate, transform=None)
