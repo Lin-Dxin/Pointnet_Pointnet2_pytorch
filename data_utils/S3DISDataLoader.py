@@ -51,7 +51,7 @@ class S3DISDataset(Dataset):
         labels = self.room_labels[room_idx]   # N
         N_points = points.shape[0]
 
-        while (True):
+        while True:
             center = points[np.random.choice(N_points)][:3]
             block_min = center - [self.block_size / 2.0, self.block_size / 2.0, 0]
             block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
@@ -171,7 +171,7 @@ class ScannetDatasetWholeScene():
         return len(self.scene_points_list)
 
 if __name__ == '__main__':
-    data_root = '..\\data\\s3dis\\Stanford3dDataset_v1.2_Aligned_Version\\'
+    data_root = '..\\data\\stanford_indoor3d\\'
     num_point, test_area, block_size, sample_rate = 4096, 5, 1.0, 0.01
 
     point_data = S3DISDataset(split='train', data_root=data_root, num_point=num_point, test_area=test_area, block_size=block_size, sample_rate=sample_rate, transform=None)
@@ -186,9 +186,10 @@ if __name__ == '__main__':
     torch.cuda.manual_seed_all(manual_seed)
     def worker_init_fn(worker_id):
         random.seed(manual_seed + worker_id)
-    train_loader = torch.utils.data.DataLoader(point_data, batch_size=16, shuffle=True, num_workers=16, pin_memory=True, worker_init_fn=worker_init_fn)
+    train_loader = torch.utils.data.DataLoader(point_data, batch_size=16, shuffle=True, num_workers=0, pin_memory=True)
     for idx in range(4):
         end = time.time()
         for i, (input, target) in enumerate(train_loader):
             print('time: {}/{}--{}'.format(i+1, len(train_loader), time.time() - end))
             end = time.time()
+            break

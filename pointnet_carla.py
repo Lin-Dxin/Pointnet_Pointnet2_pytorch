@@ -26,12 +26,10 @@ def weights_init(m):
 if __name__ == '__main__':
     train_dataset = CarlaDataset(split='train')
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
-                              pin_memory=True, drop_last=True,
-                              worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
+                              pin_memory=True, drop_last=True)
     test_dataset = CarlaDataset(split='test')
     test_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
-                             pin_memory=True, drop_last=True,
-                             worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
+                             pin_memory=True, drop_last=True)
     # print(train_dataset.__len__())
     # print(test_dataset.__len__())
     numclass = 24
@@ -79,12 +77,13 @@ if __name__ == '__main__':
         classifier = classifier.train()
 
         for i, (points, target) in tqdm(enumerate(train_loader), total=len(train_loader), smoothing=0.9):
-            print(points.shape)
-            print(target.shape)
+            # print(points.shape)
+            # print(target)
             optimizer.zero_grad()
             points = points.data.numpy()
             points = torch.Tensor(points)
             points, target = points.float().cuda(), target.long().cuda()
+            points = points.transpose(2, 1)
 
             seg_pred, trans_feat = classifier(points)
             seg_pred = seg_pred.contiguous().view(-1, numclass)
@@ -140,8 +139,8 @@ if __name__ == '__main__':
                     total_iou_deno_class[l] += np.sum(((pred_val == l) | (batch_label == l)))
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
         mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=np.float) + 1e-6))
-        print('eval mean loss: %f' % (loss_sum / float(num_batches)))
-        print('eval point avg class IoU: %f' % (mIoU))
-        print('eval point accuracy: %f' % (total_correct / float(total_seen)))
-        print('eval point avg class acc: %f' % (
+        print('\neval mean loss: %f' % (loss_sum / float(num_batches)))
+        print('\neval point avg class IoU: %f' % (mIoU))
+        print('\neval point accuracy: %f' % (total_correct / float(total_seen)))
+        print('\neval point avg class acc: %f' % (
             np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float) + 1e-6))))
