@@ -5,7 +5,26 @@ import time
 from models.pointnet_sem_diy import get_model, get_loss
 import torch
 from tqdm import tqdm
+import datetime
+import os
+import sys
+import logging
+from pathlib import Path
 
+classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
+           'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
+           , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
+class2label = {cls: i for i, cls in enumerate(classes)}
+seg_classes = class2label
+seg_label_to_cat = {}
+for i, cat in enumerate(seg_classes.keys()):
+    seg_label_to_cat[i] = cat
+
+os.environ["KMP_DUPLICATE_LIB_OK"] ="TRUE"
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = BASE_DIR
+sys.path.append(os.path.join(ROOT_DIR, 'models'))
 
 def inplace_relu(m):
     classname = m.__class__.__name__
@@ -24,6 +43,31 @@ def weights_init(m):
 
 
 if __name__ == '__main__':
+
+    # prepare for log file
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
+    experiment_dir = Path('./log/')
+    experiment_dir.mkdir(exist_ok=True)
+    experiment_dir = experiment_dir.joinpath('sem_seg')
+    experiment_dir.mkdir(exist_ok=True)
+    experiment_dir = experiment_dir.joinpath(timestr)
+    experiment_dir.mkdir(exist_ok=True)
+    log_dir = experiment_dir.joinpath('logs/')
+    log_dir.mkdir(exist_ok=True)
+
+    logger = logging.getLogger("Model")
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler = logging.FileHandler('carla_seg.txt')
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    def log_string(str):
+        logger.info(str)
+        print(str)
+    # train
+
     train_dataset = CarlaDataset(split='train')
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True)
@@ -32,7 +76,10 @@ if __name__ == '__main__':
                              pin_memory=True, drop_last=True)
     # print(train_dataset.__len__())
     # print(test_dataset.__len__())
-    numclass = 24
+    log_string("The number of training data is: %d" % len(train_dataset))
+    log_string("The number of test data is: %d" % len(test_dataset))
+
+    numclass = 23
     classifier = get_model(numclass).cuda()
     criterion = get_loss().cuda()
     classifier.apply(inplace_relu)
@@ -63,7 +110,9 @@ if __name__ == '__main__':
     epoch_num = 32
     best_iou = 0
     for epoch in range(epoch_num):
+        log_string('**** Epoch %d  ****' % (epoch + 1))
         lr = max(learning_rate * (decay_rate ** (epoch // step_size)), LEARNING_RATE_CLIP)
+        log_string('Learning rate:%f' % lr)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
         momentum = MOMENTUM_ORIGINAL * (MOMENTUM_DECCAY ** (epoch // MOMENTUM_DECCAY_STEP))
@@ -99,18 +148,18 @@ if __name__ == '__main__':
             total_correct += correct
             # total_seen += (BATCH_SIZE * NUM_POINT)
             loss_sum += loss
-        print('Training mean loss: %f' % (loss_sum / num_batches))
-        print('Training accuracy: %f' % (total_correct / float(total_seen)))
+        log_string('Training mean loss: %f' % (loss_sum / num_batches))
+        log_string('Training accuracy: %f' % (total_correct / float(total_seen)))
 
         with torch.no_grad():
             num_batches = len(test_loader)
             total_correct = 0
             total_seen = 0
             loss_sum = 0
-            labelweights = np.zeros(24)
-            total_seen_class = [0 for _ in range(24)]
-            total_correct_class = [0 for _ in range(24)]
-            total_iou_deno_class = [0 for _ in range(24)]
+            labelweights = np.zeros(23)
+            total_seen_class = [0 for _ in range(23)]
+            total_correct_class = [0 for _ in range(23)]
+            total_iou_deno_class = [0 for _ in range(23)]
             classifier = classifier.eval()
             print('---- EPOCH %03d EVALUATION ----' % (epoch + 1))
             for i, (points, target) in tqdm(enumerate(test_loader), total=len(test_loader), smoothing=0.9):
@@ -121,7 +170,7 @@ if __name__ == '__main__':
 
                 seg_pred, trans_feat = classifier(points)
                 pred_val = seg_pred.contiguous().cpu().data.numpy()
-                seg_pred = seg_pred.contiguous().view(-1, 24)
+                seg_pred = seg_pred.contiguous().view(-1, 23)
                 batch_label = target.cpu().data.numpy()
                 target = target.view(-1, 1)[:, 0]
                 loss = criterion(seg_pred, target, trans_feat, weights)
@@ -130,17 +179,25 @@ if __name__ == '__main__':
                 correct = np.sum((pred_val == batch_label))
                 total_correct += correct
                 # total_seen += (BATCH_SIZE * NUM_POINT)
-                tmp, _ = np.histogram(batch_label, range(25))
+                tmp, _ = np.histogram(batch_label, range(24))
                 labelweights += tmp
 
-                for l in range(24):
+                for l in range(23):
                     total_seen_class[l] += np.sum((batch_label == l))
                     total_correct_class[l] += np.sum((pred_val == l) & (batch_label == l))
                     total_iou_deno_class[l] += np.sum(((pred_val == l) | (batch_label == l)))
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
         mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=np.float) + 1e-6))
-        print('\neval mean loss: %f' % (loss_sum / float(num_batches)))
-        print('\neval point avg class IoU: %f' % (mIoU))
-        print('\neval point accuracy: %f' % (total_correct / float(total_seen)))
-        print('\neval point avg class acc: %f' % (
+        log_string('eval mean loss: %f' % (loss_sum / float(num_batches)))
+        log_string('eval point avg class IoU: %f' % mIoU)
+        log_string('eval point accuracy: %f' % (total_correct / float(total_seen)))
+        log_string('eval point avg class acc: %f' % (
             np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float) + 1e-6))))
+        iou_per_class_str = '------- IoU --------\n'
+        for l in range(numclass):
+            iou_per_class_str += 'class %s weight: %.3f, IoU: %.3f \n' % (
+                    seg_label_to_cat[l] + ' ' * (24 - len(seg_label_to_cat[l])), labelweights[l - 1],
+                    total_correct_class[l] / float(total_iou_deno_class[l]))
+        log_string(iou_per_class_str)
+        log_string('Eval mean loss: %f' % (loss_sum / num_batches))
+        log_string('Eval accuracy: %f' % (total_correct / float(total_seen)))

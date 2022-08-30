@@ -8,10 +8,10 @@ from time import time
 
 
 class CarlaDataset(Dataset):
-    label_weights = np.random.uniform(size=24)
+    label_weights = np.random.uniform(size=23)
 
     def __init__(self, carla_dir='data\\carla', transform=None, split='train', proportion=0.8,
-                 label_weights=np.random.uniform(size=24), numpoints=4096):
+                 label_weights=np.random.uniform(size=23), numpoints=4096):
         self.split = split
         self.proportion = proportion
         self.carla_dir = carla_dir
@@ -28,7 +28,7 @@ class CarlaDataset(Dataset):
         data = []
         label = []
 
-        print(type(data))
+        # print(type(data))
         for file in all_file:
             plydata = PlyData.read(os.path.join(self.carla_dir, file))
             raw_data = plydata.elements[0].data[:8000]
@@ -42,32 +42,32 @@ class CarlaDataset(Dataset):
                 # np.append(label, point[5])
         n = 8000
 
-        data = [data[j:j + n] for j in range(0, len(label), n)]
-        label = [label[j:j + n] for j in range(0, len(label), n)]
+        self.file_data = [data[j:j + n] for j in range(0, len(label), n)]
+        self.file_label = [label[j:j + n] for j in range(0, len(label), n)]
         data = np.array(data, dtype=np.float32)
         label = np.array(label, dtype=np.float32)
         self.data_len = len(label)
         self.point_label = label
         self.point_data = data
-        print(self.point_label.shape)
-        print(self.point_data.shape)
+        # print(self.point_label.shape)
+        # print(self.point_data.shape)
         # labelweights = np.zeros(23)
         # labelweights = labelweights.astype(np.float32)
         # labelweights = labelweights / np.sum(labelweights)
         # self.labelweights = np.power(np.amax(labelweights) / labelweights, 1 / 3.0)
 
-
-    def __getitem__(self, idx):
+    def __getitem__(self, file_idx):
         # selected_data = np.zeros((self.numpoints, 4))
         # selected_label = np.zeros()
-        point = self.point_data[idx]
-        label = self.point_label[idx]
+        idx = int(file_idx / 8000)
+        point = self.file_data[idx]
+        label = self.file_label[idx]
         if len(label) >= self.numpoints:
             selected_point_idxs = np.random.choice(8000, self.numpoints, replace=False)
         else:
             selected_point_idxs = np.random.choice(8000, self.numpoints, replace=True)
-        selected_data = point[selected_point_idxs]
-        selected_label = label[selected_point_idxs]
+        selected_data = np.array(point, dtype=np.float32)[selected_point_idxs]
+        selected_label = np.array(label, dtype=np.float32)[selected_point_idxs]
         return selected_data, selected_label
 
     def __len__(self):
