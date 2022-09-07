@@ -10,7 +10,7 @@ import os
 import sys
 import logging
 from pathlib import Path
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 
 classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
            'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
 
     # train
-
+    # config dataloader
     train_dataset = CarlaDataset(split='train')
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True)
@@ -86,8 +86,8 @@ if __name__ == '__main__':
     log_string("The number of test data is: %d" % len(test_dataset))
 
     numclass = 23
-    classifier = get_model(numclass).cuda()
-    criterion = get_loss().cuda()
+    classifier = get_model(numclass).cuda() # loading model
+    criterion = get_loss().cuda() # loss function
     classifier.apply(inplace_relu)
     learning_rate = 0.001
     decay_rate = 0.0001
