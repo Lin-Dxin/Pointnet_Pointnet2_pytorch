@@ -86,8 +86,8 @@ if __name__ == '__main__':
     log_string("The number of test data is: %d" % len(test_dataset))
 
     numclass = 23
-    classifier = get_model(numclass).cuda() # loading model
-    criterion = get_loss().cuda() # loss function
+    classifier = get_model(numclass).to(device) # loading model
+    criterion = get_loss().to(device) # loss function
     classifier.apply(inplace_relu)
     learning_rate = 0.001
     decay_rate = 0.0001
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     MOMENTUM_DECCAY = 0.5
     MOMENTUM_DECCAY_STEP = step_size
     temp = CarlaDataset.label_weights
-    weights = torch.Tensor(temp).cuda()
+    weights = torch.Tensor(temp).to(device)
 
     optimizer = torch.optim.Adam(
         classifier.parameters(),
@@ -138,7 +138,7 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             points = points.data.numpy()
             points = torch.Tensor(points)
-            points, target = points.float().cuda(), target.long().cuda()
+            points, target = points.float().to(device), target.long().to(device)
             points = points.transpose(2, 1)
 
             seg_pred, trans_feat = classifier(points)
@@ -174,7 +174,7 @@ if __name__ == '__main__':
             for i, (points, target) in tqdm(enumerate(test_loader), total=len(test_loader), smoothing=0.9):
                 points = points.data.numpy()
                 points = torch.Tensor(points)
-                points, target = points.float().cuda(), target.long().cuda()
+                points, target = points.float().to(device), target.long().to(device)
                 points = points.transpose(2, 1)
 
                 seg_pred, trans_feat = classifier(points)
