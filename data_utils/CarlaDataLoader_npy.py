@@ -36,26 +36,24 @@ class CarlaDataset(Dataset):
         # # file_label = []
         # # print(type(data))
         # for file in all_file:
-            # room_path = os.path.join(carla_dir, file)
-            # raw_data = np.load(room_path)
-            # # print(type(raw_data), raw_data.dtype)
-            # # raw_data = np.asarray(raw_data)
-            # # index.append(raw_data.size)
-            # temp_data = []
-            # temp_label = []
-            # for _raw in raw_data:
-            #     # _raw = np.asarray(_raw)
-            #     # print(_raw[1])
-            #     temp = [_raw[0], _raw[1], _raw[2], _raw[3]]
-            #     temp_data.append(temp)
-            #     temp_label.append(_raw[5])
-            # del raw_data
-            # data.append(temp_data)
-            # label.append(temp_label)
-            # del temp_data
-            # del temp_label
-
-
+        # room_path = os.path.join(carla_dir, file)
+        # raw_data = np.load(room_path)
+        # # print(type(raw_data), raw_data.dtype)
+        # # raw_data = np.asarray(raw_data)
+        # # index.append(raw_data.size)
+        # temp_data = []
+        # temp_label = []
+        # for _raw in raw_data:
+        #     # _raw = np.asarray(_raw)
+        #     # print(_raw[1])
+        #     temp = [_raw[0], _raw[1], _raw[2], _raw[3]]
+        #     temp_data.append(temp)
+        #     temp_label.append(_raw[5])
+        # del raw_data
+        # data.append(temp_data)
+        # label.append(temp_label)
+        # del temp_data
+        # del temp_label
 
         # self.file_data = [data[j:j + n] for j in range(0, len(label), n)]
         # self.file_label = [label[j:j + n] for j in range(0, len(label), n)]
@@ -97,7 +95,7 @@ class CarlaDataset(Dataset):
 
 
 if __name__ == '__main__':
-    point_data = CarlaDataset(split='train')
+    point_data = CarlaDataset(carla_dir='../data/carla', split='train')
     train_loader = DataLoader(point_data, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True,
                               worker_init_fn=lambda x: np.random.seed(x + int(time.time())))

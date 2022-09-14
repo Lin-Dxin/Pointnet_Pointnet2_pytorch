@@ -2,7 +2,7 @@ from data_utils.CarlaDataLoader_npy import CarlaDataset
 from torch.utils.data import DataLoader
 import numpy as np
 import time
-from models.pointnet_sem_diy import get_model, get_loss
+from models.pointnet2_semseg_carla import get_model, get_loss
 import torch
 from tqdm import tqdm
 import datetime
@@ -55,6 +55,8 @@ if __name__ == '__main__':
     experiment_dir.mkdir(exist_ok=True)
     experiment_dir = experiment_dir.joinpath(timestr)
     experiment_dir.mkdir(exist_ok=True)
+    checkpoints_dir = experiment_dir.joinpath('checkpoints/')
+    checkpoints_dir.mkdir(exist_ok=True)
     log_dir = experiment_dir.joinpath('logs/')
     log_dir.mkdir(exist_ok=True)
 
@@ -217,3 +219,17 @@ if __name__ == '__main__':
         log_string('Spending Time: %f' % spd_time)
         log_string('Eval mean loss: %f' % (loss_sum / num_batches))
         log_string('Eval accuracy: %f' % (total_correct / float(total_seen)))
+        if mIoU >= best_iou:
+            best_iou = mIoU
+            logger.info('Save model...')
+            savepath = str(checkpoints_dir) + '/best_model.pth'
+            log_string('Saving at %s' % savepath)
+            state = {
+                'epoch': epoch,
+                'class_avg_iou': mIoU,
+                'model_state_dict': classifier.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+            }
+            torch.save(state, savepath)
+            log_string('Saving model....')
+        log_string('Best mIoU: %f' % best_iou)
