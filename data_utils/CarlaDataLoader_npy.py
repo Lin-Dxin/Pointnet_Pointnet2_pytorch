@@ -11,7 +11,7 @@ class CarlaDataset(Dataset):
     label_weights = np.random.uniform(size=23)
 
     def __init__(self, carla_dir='data/carla', transform=None, split='train', proportion=0.8,
-                 label_weights=np.random.uniform(size=23), numpoints=8000):
+                 label_weights=np.random.normal(size=23), numpoints=8000):
         self.split = split
         self.proportion = proportion
         # rootpath = os.path.abspath('..')
@@ -29,47 +29,8 @@ class CarlaDataset(Dataset):
             all_file = all_file[offset:]
         self.file_list = all_file
         self.file_len = len(all_file)
-        # data = []
-        # label = []
-        # # index = []
-        # # file_data = []
-        # # file_label = []
-        # # print(type(data))
-        # for file in all_file:
-        # room_path = os.path.join(carla_dir, file)
-        # raw_data = np.load(room_path)
-        # # print(type(raw_data), raw_data.dtype)
-        # # raw_data = np.asarray(raw_data)
-        # # index.append(raw_data.size)
-        # temp_data = []
-        # temp_label = []
-        # for _raw in raw_data:
-        #     # _raw = np.asarray(_raw)
-        #     # print(_raw[1])
-        #     temp = [_raw[0], _raw[1], _raw[2], _raw[3]]
-        #     temp_data.append(temp)
-        #     temp_label.append(_raw[5])
-        # del raw_data
-        # data.append(temp_data)
-        # label.append(temp_label)
-        # del temp_data
-        # del temp_label
-
-        # self.file_data = [data[j:j + n] for j in range(0, len(label), n)]
-        # self.file_label = [label[j:j + n] for j in range(0, len(label), n)]
-        # self.index_num = index
-        # self.file_data = data
-        # self.file_label = label
-        # # data = np.array(data, dtype=np.float32)
-        # # label = np.array(label, dtype=np.float32)
-        # self.data_len = len(label)
-        # self.point_label = label
-        # self.point_data = data
 
     def __getitem__(self, idx):
-        # selected_data = np.zeros((self.numpoints, 4))
-        # selected_label = np.zeros()
-
         roompath = os.path.join(self.carla_dir, self.file_list[idx])
         raw_data = np.load(roompath)
         point = []
@@ -78,8 +39,6 @@ class CarlaDataset(Dataset):
             temp = [_raw[0], _raw[1], _raw[2], _raw[3]]
             point.append(temp)
             label.append(_raw[5])
-        # point = file_data[idx]
-        # label = file_label[idx]
         point = np.asarray(point)
         label = np.asarray(label)
         if label.size >= self.numpoints:

@@ -10,7 +10,7 @@ import os
 import sys
 import logging
 from pathlib import Path
-# from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
            'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
@@ -193,7 +193,7 @@ if __name__ == '__main__':
                 tmp, _ = np.histogram(batch_label, range(24))
                 labelweights += tmp
 
-                for l in range(1, 23):
+                for l in range(0, 23):
                     total_seen_class[l] += np.sum((batch_label == l))
                     total_correct_class[l] += np.sum((pred_val == l) & (batch_label == l))
                     total_iou_deno_class[l] += np.sum(((pred_val == l) | (batch_label == l)))
@@ -208,7 +208,7 @@ if __name__ == '__main__':
         iou_per_class_str = '------- IoU --------\n'
         for l in range(numclass):
             iou_per_class_str += 'class %s weight: %.3f' % (
-                seg_label_to_cat[l] + ' ' * (24 - len(seg_label_to_cat[l])), labelweights[l - 1])
+                seg_label_to_cat[l] + ' ' * (23 - len(seg_label_to_cat[l])), labelweights[l])
             if total_iou_deno_class[l] != 0:
                 iou_per_class_str += ', IoU: %.3f \n' % (total_correct_class[l] / float(total_iou_deno_class[l]))
             else:
