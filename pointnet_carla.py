@@ -146,13 +146,13 @@ if __name__ == '__main__':
             seg_pred, trans_feat = classifier(points)
             seg_pred = seg_pred.contiguous().view(-1, numclass)
 
-            batch_label = target.view(-1, 1)[:, 0].to(device).data.numpy()
+            batch_label = target.view(-1, 1)[:, 0].cpu().data.numpy()
             target = target.view(-1, 1)[:, 0]
             loss = criterion(seg_pred, target, trans_feat, weights)
             loss.backward()
             optimizer.step()
 
-            pred_choice = seg_pred.to(device).data.max(1)[1].numpy()
+            pred_choice = seg_pred.cpu().data.max(1)[1].numpy()
             correct = np.sum(pred_choice == batch_label)
             total_correct += correct
             # total_seen += (16 * 4096)
@@ -180,9 +180,9 @@ if __name__ == '__main__':
                 points = points.transpose(2, 1)
 
                 seg_pred, trans_feat = classifier(points)
-                pred_val = seg_pred.contiguous().to(device).data.numpy()
+                pred_val = seg_pred.contiguous().cpu().data.numpy()
                 seg_pred = seg_pred.contiguous().view(-1, 23)
-                batch_label = target.to(device).data.numpy()
+                batch_label = target.cpu().data.numpy()
                 target = target.view(-1, 1)[:, 0]
                 loss = criterion(seg_pred, target, trans_feat, weights)
                 loss_sum += loss
@@ -190,7 +190,7 @@ if __name__ == '__main__':
                 correct = np.sum((pred_val == batch_label))
                 total_correct += correct
                 total_seen += 16 * train_dataset.numpoints
-                print(np.histogram(batch_label, range(24)))
+                # print(np.histogram(batch_label, range(24)))
                 tmp, _ = np.histogram(batch_label, range(24))
                 labelweights += tmp
 
