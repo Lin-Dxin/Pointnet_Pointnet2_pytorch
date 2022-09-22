@@ -204,8 +204,8 @@ if __name__ == '__main__':
         log_string('eval mean loss: %f' % (loss_sum / float(num_batches)))
         log_string('eval point avg class IoU: %f' % mIoU)
         log_string('eval point accuracy: %f' % (total_correct / float(total_seen)))
-        log_string('eval point avg class acc: %f' % (
-            np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=float) + 1e-6))))
+        # log_string('eval point avg class acc: %f' % (
+        #     np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=float) + 1e-6))))
         iou_per_class_str = '------- IoU --------\n'
         for l in range(numclass):
             iou_per_class_str += 'class %s weight: %.3f' % (
