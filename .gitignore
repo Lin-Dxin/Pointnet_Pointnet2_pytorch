@@ -8,6 +8,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+data/
 build/
 develop-eggs/
 dist/
@@ -35,6 +36,9 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
+# temporory logs
+log/
+
 # Unit test / coverage reports
 htmlcov/
 .tox/
@@ -47,7 +51,8 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
-
+.idea
+__pycache__/
 # Translations
 *.mo
 *.pot

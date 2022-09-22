@@ -10,7 +10,7 @@ import os
 import sys
 import logging
 from pathlib import Path
-from torch.utils.tensorboard import SummaryWriter
+
 
 classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
            'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
