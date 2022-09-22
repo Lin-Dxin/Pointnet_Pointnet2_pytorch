@@ -1,4 +1,6 @@
 
+from ast import main
+from tkinter.tix import MAIN
 import torch.nn.parallel
 import torch.utils.data
 
