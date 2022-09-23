@@ -2,7 +2,7 @@ from data_utils.CarlaDataLoader_npy import CarlaDataset
 from torch.utils.data import DataLoader
 import numpy as np
 import time
-from models.pointnet2_semseg_carla import get_model, get_loss
+from models.pointnet_semseg_carla import get_model, get_loss
 import torch
 from tqdm import tqdm
 import datetime
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     logger = logging.getLogger("Model")
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler('carla_seg.txt')
+    file_handler = logging.FileHandler('%s/logs/train.txt' % experiment_dir)
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
