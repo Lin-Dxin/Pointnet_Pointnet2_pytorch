@@ -179,8 +179,8 @@ def main(args):
 
         for i, (points, target) in tqdm(enumerate(trainDataLoader), total=len(trainDataLoader), smoothing=0.9):
             optimizer.zero_grad()
-            print(points.shape)
-            print(target.shape)
+            # print(points.shape)
+            # print(target.shape)
             points = points.data.numpy()
             points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
             points = torch.Tensor(points)
