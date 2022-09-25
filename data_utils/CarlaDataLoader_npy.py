@@ -5,13 +5,14 @@ import torch
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from time import time
+import tqdm
 
 
 class CarlaDataset(Dataset):
     label_weights = np.random.uniform(size=23)
 
     def __init__(self, carla_dir='data/carla', transform=None, split='train', proportion=0.8,
-                 label_weights=np.random.normal(size=23), numpoints=8000, need_speed=True):
+                 label_weights=np.random.normal(size=23), sample_rate=0.1, numpoints=8000, need_speed=True):
         self.split = split
         self.proportion = proportion
         # rootpath = os.path.abspath('..')
@@ -29,9 +30,24 @@ class CarlaDataset(Dataset):
             all_file = all_file[offset:]
         self.file_list = all_file
         self.file_len = len(all_file)
+        # 只读取文件，不保存： 记录点数、初始化权重、标准化
+        num_all_point = []
+        for file_name in all_file:
+            path = os.path.join(self.carla_dir, file_name)
+            data = np.load(path)
+            num_all_point.append(len(data))  # 记录点云数
+
+        sample_prob = num_all_point / np.sum(num_all_point)
+        num_iter = int(np.sum(num_all_point) * sample_rate / numpoints)
+        room_idxs = []
+        for index in range(self.file_len):
+            room_idxs.extend([index] * int(round((sample_prob[index]) * num_iter)))
+        self.room_idxs = np.array(room_idxs)
+        print("Totally {} samples in {} set.".format(len(self.room_idxs), split))
 
     def __getitem__(self, idx):
-        roompath = os.path.join(self.carla_dir, self.file_list[idx])
+        room_idx = self.room_idxs[idx]
+        roompath = os.path.join(self.carla_dir, self.file_list[room_idx])
         raw_data = np.load(roompath)
         point = []
         label = []
@@ -53,7 +69,7 @@ class CarlaDataset(Dataset):
         return selected_data, selected_label
 
     def __len__(self):
-        return self.file_len
+        return len(self.room_idxs)
 
 
 if __name__ == '__main__':
