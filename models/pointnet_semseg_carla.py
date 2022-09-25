@@ -1,6 +1,6 @@
-
-from ast import main
-from tkinter.tix import MAIN
+#
+# from ast import main
+# from tkinter.tix import MAIN
 import torch.nn.parallel
 import torch.utils.data
 
@@ -18,7 +18,7 @@ class get_model(nn.Module):
     def __init__(self, num_class):
         super(get_model, self).__init__()
         self.k = num_class
-        self.feat = PointNetEncoder(global_feat=False, feature_transform=True, channel=4)
+        self.feat = PointNetEncoder(global_feat=False, feature_transform=True, channel=3)
         self.conv1 = torch.nn.Conv1d(1088, 512, 1)
         self.conv2 = torch.nn.Conv1d(512, 256, 1)
         self.conv3 = torch.nn.Conv1d(256, 128, 1)

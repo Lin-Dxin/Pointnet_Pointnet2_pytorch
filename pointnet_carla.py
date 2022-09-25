@@ -2,7 +2,7 @@ from data_utils.CarlaDataLoader_npy import CarlaDataset
 from torch.utils.data import DataLoader
 import numpy as np
 import time
-from models.pointnet2_semseg_carla import get_model, get_loss
+from models.pointnet_semseg_carla import get_model, get_loss
 import torch
 from tqdm import tqdm
 import datetime
@@ -47,7 +47,7 @@ def weights_init(m):
 if __name__ == '__main__':
 
     # prepare for log file
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
     experiment_dir = Path('./log/')
     experiment_dir.mkdir(exist_ok=True)
