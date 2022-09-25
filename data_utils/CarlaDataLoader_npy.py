@@ -11,7 +11,7 @@ class CarlaDataset(Dataset):
     label_weights = np.random.uniform(size=23)
 
     def __init__(self, carla_dir='data/carla', transform=None, split='train', proportion=0.8,
-                 label_weights=np.random.normal(size=23), numpoints=8000):
+                 label_weights=np.random.normal(size=23), numpoints=8000, need_speed=True):
         self.split = split
         self.proportion = proportion
         # rootpath = os.path.abspath('..')
@@ -20,7 +20,7 @@ class CarlaDataset(Dataset):
         self.label_weights = label_weights
         self.numpoints = numpoints
         all_file = os.listdir(self.carla_dir)
-
+        self.need_speed = need_speed
         datanum = len(all_file)
         offset = int(datanum * proportion)
         if split == 'train':
@@ -36,7 +36,10 @@ class CarlaDataset(Dataset):
         point = []
         label = []
         for _raw in raw_data:
-            temp = [_raw[0], _raw[1], _raw[2], _raw[3]]
+            if self.need_speed == True:
+                temp = [_raw[0], _raw[1], _raw[2], _raw[3]]
+            else:
+                temp = [_raw[0], _raw[1], _raw[2]]
             point.append(temp)
             label.append(_raw[5])
         point = np.asarray(point)

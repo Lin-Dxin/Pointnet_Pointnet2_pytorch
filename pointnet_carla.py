@@ -2,7 +2,7 @@ from data_utils.CarlaDataLoader_npy import CarlaDataset
 from torch.utils.data import DataLoader
 import numpy as np
 import time
-from models.pointnet_semseg_carla import get_model, get_loss
+from models.pointnet2_semseg_carla import get_model, get_loss
 import torch
 from tqdm import tqdm
 import datetime
@@ -47,7 +47,7 @@ def weights_init(m):
 if __name__ == '__main__':
 
     # prepare for log file
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
     timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
     experiment_dir = Path('./log/')
     experiment_dir.mkdir(exist_ok=True)
@@ -76,11 +76,11 @@ if __name__ == '__main__':
 
     # train
     # config dataloader
-    train_dataset = CarlaDataset(split='train')
+    train_dataset = CarlaDataset(split='train',need_speed=False)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True)
-    test_dataset = CarlaDataset(split='test')
-    test_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
+    test_dataset = CarlaDataset(split='test',need_speed=False)
+    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=True, num_workers=0,
                              pin_memory=True, drop_last=True)
     # print(train_dataset.__len__())
     # print(test_dataset.__len__())
