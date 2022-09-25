@@ -37,11 +37,11 @@ class S3DISDataset(Dataset):
         labelweights = labelweights / np.sum(labelweights)
         self.labelweights = np.power(np.amax(labelweights) / labelweights, 1 / 3.0)
         print(self.labelweights)
-        sample_prob = num_point_all / np.sum(num_point_all)
-        num_iter = int(np.sum(num_point_all) * sample_rate / num_point)
+        sample_prob = num_point_all / np.sum(num_point_all)  # 每个NPY文件的点云数占总点云数的比例
+        num_iter = int(np.sum(num_point_all) * sample_rate / num_point)  # 最终生成的idxs数？
         room_idxs = []
         for index in range(len(rooms_split)):
-            room_idxs.extend([index] * int(round(sample_prob[index] * num_iter)))
+            room_idxs.extend([index] * int(round(sample_prob[index] * num_iter)))  #
         self.room_idxs = np.array(room_idxs)
         print("Totally {} samples in {} set.".format(len(self.room_idxs), split))
 
