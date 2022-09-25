@@ -12,10 +12,11 @@ class CarlaDataset(Dataset):
     label_weights = np.random.uniform(size=23)
 
     def __init__(self, carla_dir='data/carla', transform=None, split='train', proportion=0.8,
-                 label_weights=np.random.normal(size=23), sample_rate=0.1, numpoints=8000, need_speed=True):
+                 label_weights=np.random.normal(size=23), sample_rate=0.1, numpoints=1024*8, need_speed=True, block_size=1.0):
         self.split = split
         self.proportion = proportion
         # rootpath = os.path.abspath('..')
+        self.block_size = block_size
         self.carla_dir = os.path.join(carla_dir)
         self.transform = transform
         self.label_weights = label_weights
@@ -60,10 +61,18 @@ class CarlaDataset(Dataset):
             label.append(_raw[5])
         point = np.asarray(point)
         label = np.asarray(label)
-        if label.size >= self.numpoints:
-            selected_point_idxs = np.random.choice(label.size, self.numpoints, replace=False)
+        N_points = len(label)
+        while True:
+            center = point[np.random.choice(N_points)][:3]
+            block_min = center - [self.block_size / 2.0, self.block_size / 2.0, 0]
+            block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
+            point_idxs = np.where((point[:, 0] >= block_min[0]) & (point[:, 0] <= block_max[0]) & (point[:, 1] >= block_min[1]) & (point[:, 1] <= block_max[1]))[0]
+            if point_idxs.size > 1024:
+                break
+        if point_idxs.size >= self.numpoints:
+            selected_point_idxs = np.random.choice(point_idxs, self.numpoints, replace=False)
         else:
-            selected_point_idxs = np.random.choice(label.size, self.numpoints, replace=True)
+            selected_point_idxs = np.random.choice(point_idxs, self.numpoints, replace=True)
         selected_data = np.array(point, dtype=np.float32)[selected_point_idxs]
         selected_label = np.array(label, dtype=np.float32)[selected_point_idxs]
         return selected_data, selected_label
@@ -73,7 +82,7 @@ class CarlaDataset(Dataset):
 
 
 if __name__ == '__main__':
-    point_data = CarlaDataset(carla_dir='../data/carla', split='train')
+    point_data = CarlaDataset(carla_dir='../data/carla', split='train', need_speed=False)
     train_loader = DataLoader(point_data, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True,
                               worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
