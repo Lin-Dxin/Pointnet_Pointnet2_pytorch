@@ -62,12 +62,15 @@ class CarlaDataset(Dataset):
         point = np.asarray(point)
         label = np.asarray(label)
         N_points = len(label)
+        cnt = 0
         while True:
             center = point[np.random.choice(N_points)][:3]
             block_min = center - [self.block_size / 2.0, self.block_size / 2.0, 0]
             block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
             point_idxs = np.where((point[:, 0] >= block_min[0]) & (point[:, 0] <= block_max[0]) & (point[:, 1] >= block_min[1]) & (point[:, 1] <= block_max[1]))[0]
-            if point_idxs.size > 1024:
+            # print(point_idxs.size)
+            cnt+=1
+            if point_idxs.size > 1024 | cnt > 100:
                 break
         if point_idxs.size >= self.numpoints:
             selected_point_idxs = np.random.choice(point_idxs, self.numpoints, replace=False)
