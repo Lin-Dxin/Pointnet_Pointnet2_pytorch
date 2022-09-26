@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
     # load model
     numclass = 23
-    classifier = get_model(numclass).to(device)  # loading model
+    classifier = get_model(numclass, need_speed=False).to(device)  # loading model
     criterion = get_loss().to(device)  # loss function
     model_path = './best_model.pth'
     checkpoint = torch.load(model_path)
