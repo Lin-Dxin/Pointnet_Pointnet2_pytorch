@@ -12,7 +12,8 @@ class CarlaDataset(Dataset):
     label_weights = np.random.uniform(size=23)
 
     def __init__(self, carla_dir='data/carla', transform=None, split='train', proportion=0.8,
-                 label_weights=np.random.normal(size=23), sample_rate=0.1, numpoints=1024*8, need_speed=True, block_size=1.0):
+                 label_weights=np.random.normal(size=23), sample_rate=0.1, numpoints=1024 * 8, need_speed=True,
+                 block_size=1.0):
         self.split = split
         self.proportion = proportion
         # rootpath = os.path.abspath('..')
@@ -67,10 +68,15 @@ class CarlaDataset(Dataset):
             center = point[np.random.choice(N_points)][:3]
             block_min = center - [self.block_size / 2.0, self.block_size / 2.0, 0]
             block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
-            point_idxs = np.where((point[:, 0] >= block_min[0]) & (point[:, 0] <= block_max[0]) & (point[:, 1] >= block_min[1]) & (point[:, 1] <= block_max[1]))[0]
+            point_idxs = np.where(
+                (point[:, 0] >= block_min[0]) & (point[:, 0] <= block_max[0]) & (point[:, 1] >= block_min[1]) & (
+                            point[:, 1] <= block_max[1]))[0]
             # print(point_idxs.size)
-            cnt+=1
-            if point_idxs.size > 1024 | cnt > 100:
+            cnt += 1
+            # print(cnt)
+            if point_idxs.size > 1024 or cnt > 100:
+                # print("success! with cnt:")
+                # print(cnt)
                 break
         if point_idxs.size >= self.numpoints:
             selected_point_idxs = np.random.choice(point_idxs, self.numpoints, replace=False)
