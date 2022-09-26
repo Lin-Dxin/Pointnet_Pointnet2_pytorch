@@ -200,14 +200,14 @@ if __name__ == '__main__':
                     total_iou_deno_class[l] += np.sum(((pred_val == l) | (batch_label == l)))
                 # break
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
-        # mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=float) + 1e-6))
-        sum = 0
-        valid = 0
-        for l in range(len(total_correct_class)):
-            if(total_iou_deno_class != 0):
-                valid = valid + 1
-                sum += np.array(total_correct_class[l]) / (np.array(total_iou_deno_class[l], dtype=float) + 1e-6)
-        mIoU = sum / valid
+        mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=float) + 1e-6))
+        # sum = 0
+        # valid = 0
+        # for l in range(len(total_correct_class)):
+        #     if(total_iou_deno_class != 0):
+        #         valid = valid + 1
+        #         sum += np.array(total_correct_class[l]) / (np.array(total_iou_deno_class[l], dtype=float) + 1e-6)
+        # mIoU = sum / valid
         log_string('eval mean loss: %f' % (loss_sum / float(num_batches)))
         log_string('eval point avg class IoU: %f' % mIoU)
         log_string('eval point accuracy: %f' % (total_correct / float(total_seen)))

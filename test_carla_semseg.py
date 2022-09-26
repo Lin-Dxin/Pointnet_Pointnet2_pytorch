@@ -38,8 +38,8 @@ if __name__ == '__main__':
     experiment_dir.mkdir(exist_ok=True)
     experiment_dir = experiment_dir.joinpath(timestr)
     experiment_dir.mkdir(exist_ok=True)
-    checkpoints_dir = experiment_dir.joinpath('checkpoints/')
-    checkpoints_dir.mkdir(exist_ok=True)
+    # checkpoints_dir = experiment_dir.joinpath('checkpoints/')
+    # checkpoints_dir.mkdir(exist_ok=True)
     log_dir = experiment_dir.joinpath('logs/')
     log_dir.mkdir(exist_ok=True)
 
@@ -86,7 +86,6 @@ if __name__ == '__main__':
             points = torch.Tensor(points)
             points, target = points.float().to(device), target.long().to(device)
             points = points.transpose(2, 1)
-
             seg_pred, trans_feat = classifier(points)
             pred_val = seg_pred.contiguous().cpu().data.numpy()
             seg_pred = seg_pred.contiguous().view(-1, 23)
@@ -104,22 +103,23 @@ if __name__ == '__main__':
                 total_correct_class[l] += np.sum((pred_val == l) & (batch_label == l))
                 total_iou_deno_class[l] += np.sum(((pred_val == l) | (batch_label == l)))
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
-        sum = 0
-        valid = 0
-        for l in range(len(total_correct_class)):
-            if (total_iou_deno_class != 0):
-                valid = valid + 1
-                sum += np.array(total_correct_class[l]) / (np.array(total_iou_deno_class[l], dtype=float) + 1e-6)
-        mIoU = sum / valid
+        # sum = 0
+        # valid = 0
+        # for l in range(len(total_correct_class)):
+        #     if (total_iou_deno_class != 0):
+        #         valid = valid + 1
+        #         sum += np.array(total_correct_class[l]) / (np.array(total_iou_deno_class[l], dtype=float) + 1e-6)
+        # mIoU = sum / valid
+        mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=np.float) + 1e-6))
         log_string('eval mean loss: %f' % (loss_sum / float(num_batches)))
         log_string('eval point avg class IoU: %f' % mIoU)
         log_string('eval point accuracy: %f' % (total_correct / float(total_seen)))
         iou_per_class_str = '------- IoU --------\n'
         for l in range(numclass):
-            iou_per_class_str += 'class %s weight: %.3f' % (
+            iou_per_class_str += 'class %s weight: %f' % (
                 seg_label_to_cat[l] + ' ' * (23 - len(seg_label_to_cat[l])), labelweights[l])
             if total_iou_deno_class[l] != 0:
-                iou_per_class_str += ', IoU: %.3f \n' % (total_correct_class[l] / float(total_iou_deno_class[l]))
+                iou_per_class_str += ', IoU: %f \n' % (total_correct_class[l] / float(total_iou_deno_class[l]))
             else:
                 iou_per_class_str += ', IoU: UnValid\n'
         log_string(iou_per_class_str)
