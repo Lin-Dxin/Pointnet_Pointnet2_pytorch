@@ -29,6 +29,7 @@ sys.path.append(os.path.join(ROOT_DIR, 'models'))
 
 if __name__ == '__main__':
     NEED_SPEED = True
+    PROPOTION = [0.7, 0.2, 0.1]
     # prepare for log file
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
@@ -60,7 +61,7 @@ if __name__ == '__main__':
         print(str)
 
     # config dataset and data Loader
-    dataset = CarlaDataset(split='eval', need_speed=False)
+    dataset = CarlaDataset(split='eval', need_speed=False, proportion=PROPOTION)
     dataLoader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0,
                              pin_memory=True, drop_last=True)
     log_string("The number of test data is: %d" % len(dataset))

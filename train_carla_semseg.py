@@ -45,7 +45,8 @@ def weights_init(m):
 
 
 if __name__ == '__main__':
-    NEED_SPEED = True
+    NEED_SPEED = False
+    PROPOTION = [0.7, 0.2, 0.1]
     # prepare for log file
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
@@ -80,10 +81,10 @@ if __name__ == '__main__':
     # train
     # config dataloader
 
-    train_dataset = CarlaDataset(split='train', need_speed=NEED_SPEED)
+    train_dataset = CarlaDataset(split='train', need_speed=NEED_SPEED, proportion=PROPOTION)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True)
-    test_dataset = CarlaDataset(split='test', need_speed=NEED_SPEED)
+    test_dataset = CarlaDataset(split='test', need_speed=NEED_SPEED, proportion=PROPOTION)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=True, num_workers=0,
                              pin_memory=True, drop_last=True)
     # print(train_dataset.__len__())
