@@ -11,7 +11,7 @@ import tqdm
 class CarlaDataset(Dataset):
     label_weights = np.random.uniform(size=23)
 
-    def __init__(self, carla_dir='data/carla', transform=None, split='train', proportion=[0.7, 0.2, 0.1],
+    def __init__(self, carla_dir='data/carla', transform=None, split='train', proportion=[0.8, 0.1, 0.1],
                  label_weights=np.random.normal(size=23), sample_rate=0.1, numpoints=1024 * 8, need_speed=True,
                  block_size=1.0):
         self.split = split
@@ -33,10 +33,10 @@ class CarlaDataset(Dataset):
             all_file = all_file[:train_offset]
         if split == 'test':
             print('Test Scene Data Loading..')
-            all_file = all_file[train_offset:eval_offset]
+            all_file = all_file[train_offset:test_offset]
         if split == 'eval':
             print('Eval Scene Data Loading..')
-            all_file = all_file[eval_offset:]
+            all_file = all_file[test_offset:eval_offset]
 
         self.file_list = all_file
         self.file_len = len(all_file)
@@ -99,7 +99,7 @@ class CarlaDataset(Dataset):
 
 
 if __name__ == '__main__':
-    point_data = CarlaDataset(carla_dir='../data/carla', split='train', need_speed=False)
+    point_data = CarlaDataset(carla_dir='../data/carla', split='test', need_speed=False)
     train_loader = DataLoader(point_data, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True,
                               worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
