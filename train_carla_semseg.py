@@ -76,10 +76,11 @@ if __name__ == '__main__':
 
     # train
     # config dataloader
-    train_dataset = CarlaDataset(split='train', need_speed=False)
+    NEED_SPEED = True
+    train_dataset = CarlaDataset(split='train', need_speed=NEED_SPEED)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True)
-    test_dataset = CarlaDataset(split='test', need_speed=False)
+    test_dataset = CarlaDataset(split='test', need_speed=NEED_SPEED)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=True, num_workers=0,
                              pin_memory=True, drop_last=True)
     # print(train_dataset.__len__())
@@ -88,7 +89,7 @@ if __name__ == '__main__':
     log_string("The number of test data is: %d" % len(test_dataset))
 
     numclass = 23
-    classifier = get_model(numclass, need_speed=False).to(device) # loading model
+    classifier = get_model(numclass, need_speed=NEED_SPEED).to(device) # loading model
     criterion = get_loss().to(device) # loss function
     classifier.apply(inplace_relu)
     learning_rate = 0.001
