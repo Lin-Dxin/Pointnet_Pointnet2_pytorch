@@ -60,7 +60,7 @@ if __name__ == '__main__':
         print(str)
 
     # config dataset and data Loader
-    dataset = CarlaDataset(split='whole_scene',need_speed=False)
+    dataset = CarlaDataset(split='eval', need_speed=False)
     dataLoader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0,
                              pin_memory=True, drop_last=True)
     log_string("The number of test data is: %d" % len(dataset))

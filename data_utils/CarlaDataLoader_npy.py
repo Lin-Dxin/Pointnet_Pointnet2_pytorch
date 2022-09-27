@@ -11,7 +11,7 @@ import tqdm
 class CarlaDataset(Dataset):
     label_weights = np.random.uniform(size=23)
 
-    def __init__(self, carla_dir='data/carla', transform=None, split='train', proportion=0.8,
+    def __init__(self, carla_dir='data/carla', transform=None, split='train', proportion=[0.7, 0.2, 0.1],
                  label_weights=np.random.normal(size=23), sample_rate=0.1, numpoints=1024 * 8, need_speed=True,
                  block_size=1.0):
         self.split = split
@@ -25,13 +25,19 @@ class CarlaDataset(Dataset):
         all_file = os.listdir(self.carla_dir)
         self.need_speed = need_speed
         datanum = len(all_file)
-        offset = int(datanum * proportion)
+        train_offset = int(datanum * proportion[0])
+        test_offset = int(datanum * proportion[1]) + train_offset
+        eval_offset = int(datanum * proportion[2]) + test_offset
         if split == 'train':
-            all_file = all_file[:offset]
+            print('Train Scene Data Loading..')
+            all_file = all_file[:train_offset]
         if split == 'test':
-            all_file = all_file[offset:]
-        if split == 'whole_scene':
-            print('Whole Scene Data Loading..')
+            print('Test Scene Data Loading..')
+            all_file = all_file[train_offset:eval_offset]
+        if split == 'eval':
+            print('Eval Scene Data Loading..')
+            all_file = all_file[eval_offset:]
+
         self.file_list = all_file
         self.file_len = len(all_file)
         # 只读取文件，不保存： 记录点数、初始化权重、标准化
@@ -56,7 +62,7 @@ class CarlaDataset(Dataset):
         point = []
         label = []
         for _raw in raw_data:
-            if self.need_speed == True:
+            if self.need_speed:
                 temp = [_raw[0], _raw[1], _raw[2], _raw[3]]
             else:
                 temp = [_raw[0], _raw[1], _raw[2]]
@@ -72,7 +78,7 @@ class CarlaDataset(Dataset):
             block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
             point_idxs = np.where(
                 (point[:, 0] >= block_min[0]) & (point[:, 0] <= block_max[0]) & (point[:, 1] >= block_min[1]) & (
-                            point[:, 1] <= block_max[1]))[0]
+                        point[:, 1] <= block_max[1]))[0]
             # print(point_idxs.size)
             cnt += 1
             # print(cnt)
