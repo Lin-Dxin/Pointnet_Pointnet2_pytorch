@@ -28,7 +28,7 @@ ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 
 if __name__ == '__main__':
-
+    NEED_SPEED = True
     # prepare for log file
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
@@ -46,7 +46,10 @@ if __name__ == '__main__':
     logger = logging.getLogger("Model")
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler('%s/logs/eval_logs.txt' % experiment_dir)
+    if NEED_SPEED:
+        file_handler = logging.FileHandler('%s/logs/4d_eval_logs.txt' % experiment_dir)
+    else:
+        file_handler = logging.FileHandler('%s/logs/3d_eval_logs.txt' % experiment_dir)
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -82,6 +85,7 @@ if __name__ == '__main__':
         total_correct_class = [0 for _ in range(23)]
         total_iou_deno_class = [0 for _ in range(23)]
         for i, (points, target) in tqdm(enumerate(dataLoader), total=len(dataLoader), smoothing=0.9):
+            it_start_time = time.time()
             points = points.data.numpy()
             points = torch.Tensor(points)
             points, target = points.float().to(device), target.long().to(device)
@@ -92,6 +96,8 @@ if __name__ == '__main__':
             batch_label = target.cpu().data.numpy()
             target = target.view(-1, 1)[:, 0]
             pred_val = np.argmax(pred_val, 2)
+            it_end_time = time.time()
+            print('iteration time:%.3f', it_start_time - it_end_time)
             correct = np.sum((pred_val == batch_label))
             total_correct += correct
             total_seen += 16 * dataset.numpoints

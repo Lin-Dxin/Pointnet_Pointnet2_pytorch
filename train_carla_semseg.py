@@ -45,7 +45,7 @@ def weights_init(m):
 
 
 if __name__ == '__main__':
-
+    NEED_SPEED = True
     # prepare for log file
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
@@ -63,7 +63,10 @@ if __name__ == '__main__':
     logger = logging.getLogger("Model")
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler = logging.FileHandler('%s/logs/train.txt' % experiment_dir)
+    if NEED_SPEED:
+        file_handler = logging.FileHandler('%s/logs/4d_train.txt' % experiment_dir)
+    else:
+        file_handler = logging.FileHandler('%s/logs/3d_train.txt' % experiment_dir)
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -76,7 +79,7 @@ if __name__ == '__main__':
 
     # train
     # config dataloader
-    NEED_SPEED = True
+
     train_dataset = CarlaDataset(split='train', need_speed=NEED_SPEED)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True)
