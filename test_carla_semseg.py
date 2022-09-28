@@ -28,7 +28,7 @@ ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 
 if __name__ == '__main__':
-    NEED_SPEED = True
+    NEED_SPEED = False
     PROPOTION = [0.7, 0.2, 0.1]
     # prepare for log file
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -61,14 +61,14 @@ if __name__ == '__main__':
         print(str)
 
     # config dataset and data Loader
-    dataset = CarlaDataset(split='eval', need_speed=False, proportion=PROPOTION)
+    dataset = CarlaDataset(split='eval', need_speed=NEED_SPEED, proportion=PROPOTION)
     dataLoader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0,
                              pin_memory=True, drop_last=True)
     log_string("The number of test data is: %d" % len(dataset))
 
     # load model
     numclass = 23
-    classifier = get_model(numclass, need_speed=False).to(device)  # loading model
+    classifier = get_model(numclass, need_speed=NEED_SPEED).to(device)  # loading model
     criterion = get_loss().to(device)  # loss function
     model_path = './best_model.pth'
     checkpoint = torch.load(model_path)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
             target = target.view(-1, 1)[:, 0]
             pred_val = np.argmax(pred_val, 2)
             it_end_time = time.time()
-            print('iteration time:%.3f', it_start_time - it_end_time)
+            print('iteration time:%.3f', it_end_time - it_start_time)
             correct = np.sum((pred_val == batch_label))
             total_correct += correct
             total_seen += 16 * dataset.numpoints
