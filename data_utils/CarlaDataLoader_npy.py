@@ -30,13 +30,13 @@ class CarlaDataset(Dataset):
         eval_offset = int(datanum * proportion[2]) + test_offset
         if split == 'train':
             print('Train Scene Data Loading..')
-            all_file = all_file[:train_offset]
+            all_file = all_file[:train_offset] # 0 - 70%
         if split == 'test':
             print('Test Scene Data Loading..')
-            all_file = all_file[train_offset:test_offset]
+            all_file = all_file[train_offset:test_offset] # 70 - 90%
         if split == 'eval':
             print('Eval Scene Data Loading..')
-            all_file = all_file[test_offset:eval_offset]
+            all_file = all_file[test_offset:eval_offset] # 90 - 100%
 
         self.file_list = all_file
         self.file_len = len(all_file)

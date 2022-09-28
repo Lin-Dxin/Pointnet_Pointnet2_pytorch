@@ -11,7 +11,6 @@ import sys
 import logging
 from pathlib import Path
 
-
 classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
            'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
     , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
@@ -60,10 +59,11 @@ if __name__ == '__main__':
         logger.info(str)
         print(str)
 
+
     # config dataset and data Loader
     dataset = CarlaDataset(split='eval', need_speed=NEED_SPEED, proportion=PROPOTION)
     dataLoader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0,
-                             pin_memory=True, drop_last=True)
+                            pin_memory=True, drop_last=True)
     log_string("The number of test data is: %d" % len(dataset))
 
     # load model
@@ -98,7 +98,7 @@ if __name__ == '__main__':
             target = target.view(-1, 1)[:, 0]
             pred_val = np.argmax(pred_val, 2)
             it_end_time = time.time()
-            print('iteration time:%.3f', it_start_time - it_end_time)
+            print('\niteration time:'  ,(it_end_time - it_start_time))
             correct = np.sum((pred_val == batch_label))
             total_correct += correct
             total_seen += 16 * dataset.numpoints
@@ -135,5 +135,3 @@ if __name__ == '__main__':
         log_string('Spending Time: %f' % spd_time)
         log_string('Eval accuracy: %f' % (total_correct / float(total_seen)))
         log_string('Eval mIoU: %f' % mIoU)
-
-
