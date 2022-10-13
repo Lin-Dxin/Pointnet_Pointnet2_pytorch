@@ -10,11 +10,17 @@ import os
 import sys
 import logging
 from pathlib import Path
+from torch.utils.tensorboard import SummaryWriter
+
+log_writer = SummaryWriter('./log/')
 
 
-classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
-           'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
+raw_classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
+               'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
     , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
+# raw_classes = np.array(raw_classes)
+valid_label = [1, 7, 8, 10, 11]  # carla中有效的点 Building, Road, Sidewalk, Vehicles, Wall
+classes = ['Background','Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
 class2label = {cls: i for i, cls in enumerate(classes)}
 seg_classes = class2label
 seg_label_to_cat = {}
@@ -81,7 +87,7 @@ if __name__ == '__main__':
     # train
     # config dataloader
 
-    train_dataset = CarlaDataset(split='train', need_speed=NEED_SPEED, proportion=PROPOTION)
+    train_dataset = CarlaDataset(split='train', num_classes=6 ,need_speed=NEED_SPEED, proportion=PROPOTION)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True)
     test_dataset = CarlaDataset(split='test', need_speed=NEED_SPEED, proportion=PROPOTION)
@@ -92,9 +98,9 @@ if __name__ == '__main__':
     log_string("The number of training data is: %d" % len(train_dataset))
     log_string("The number of test data is: %d" % len(test_dataset))
 
-    numclass = 23
-    classifier = get_model(numclass, need_speed=NEED_SPEED).to(device) # loading model
-    criterion = get_loss().to(device) # loss function
+    numclass = 6
+    classifier = get_model(numclass, need_speed=NEED_SPEED).to(device)  # loading model
+    criterion = get_loss().to(device)  # loss function
     classifier.apply(inplace_relu)
     learning_rate = 0.001
     decay_rate = 0.0001
@@ -143,6 +149,7 @@ if __name__ == '__main__':
             # print(points.shape)
             # print(target)
             optimizer.zero_grad()
+            # print(target)
             points = points.data.numpy()
             points = torch.Tensor(points)
             points, target = points.float().to(device), target.long().to(device)
@@ -164,6 +171,8 @@ if __name__ == '__main__':
             total_seen += 16 * train_dataset.numpoints
             loss_sum += loss
             # break
+        log_writer.add_scalar('Loss/train', float(loss_sum / num_batches), epoch)
+        log_writer.add_scalar('ACC/train', total_correct / float(total_seen), epoch)
         log_string('Training mean loss: %f' % (loss_sum / num_batches))
         log_string('Training accuracy: %f' % (total_correct / float(total_seen)))
 
@@ -172,10 +181,10 @@ if __name__ == '__main__':
             total_correct = 0
             total_seen = 0
             loss_sum = 0
-            labelweights = np.zeros(23)
-            total_seen_class = [0 for _ in range(23)]
-            total_correct_class = [0 for _ in range(23)]
-            total_iou_deno_class = [0 for _ in range(23)]
+            labelweights = np.zeros(numclass)
+            total_seen_class = [0 for _ in range(numclass)]
+            total_correct_class = [0 for _ in range(numclass)]
+            total_iou_deno_class = [0 for _ in range(numclass)]
             classifier = classifier.eval()
             print('---- EPOCH %03d EVALUATION ----' % (epoch + 1))
             for i, (points, target) in tqdm(enumerate(test_loader), total=len(test_loader), smoothing=0.9):
@@ -186,7 +195,7 @@ if __name__ == '__main__':
 
                 seg_pred, trans_feat = classifier(points)
                 pred_val = seg_pred.contiguous().cpu().data.numpy()
-                seg_pred = seg_pred.contiguous().view(-1, 23)
+                seg_pred = seg_pred.contiguous().view(-1, numclass)
                 batch_label = target.cpu().data.numpy()
                 target = target.view(-1, 1)[:, 0]
                 loss = criterion(seg_pred, target, trans_feat, weights)
@@ -196,16 +205,18 @@ if __name__ == '__main__':
                 total_correct += correct
                 total_seen += 16 * train_dataset.numpoints
                 # print(np.histogram(batch_label, range(24)))
-                tmp, _ = np.histogram(batch_label, range(24))
+                tmp, _ = np.histogram(batch_label, range(numclass + 1))
                 labelweights += tmp
 
-                for l in range(0, 23):
+                for l in range(0, numclass):
                     total_seen_class[l] += np.sum((batch_label == l))
                     total_correct_class[l] += np.sum((pred_val == l) & (batch_label == l))
                     total_iou_deno_class[l] += np.sum(((pred_val == l) | (batch_label == l)))
                 # break
+
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
         mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=float) + 1e-6))
+        log_writer.add_scalar('mIoU/eval', mIoU, epoch)
         # sum = 0
         # valid = 0
         # for l in range(len(total_correct_class)):
@@ -221,7 +232,7 @@ if __name__ == '__main__':
         iou_per_class_str = '------- IoU --------\n'
         for l in range(numclass):
             iou_per_class_str += 'class %s weight: %.3f' % (
-                seg_label_to_cat[l] + ' ' * (23 - len(seg_label_to_cat[l])), labelweights[l])
+                seg_label_to_cat[l] + ' ' * (numclass - len(seg_label_to_cat[l])), labelweights[l])
             if total_iou_deno_class[l] != 0:
                 iou_per_class_str += ', IoU: %.3f \n' % (total_correct_class[l] / float(total_iou_deno_class[l]))
             else:

@@ -9,18 +9,19 @@ import tqdm
 
 
 class CarlaDataset(Dataset):
-    label_weights = np.random.uniform(size=23)
+    label_weights = np.random.normal(size=6)
 
-    def __init__(self, carla_dir='data/carla', transform=None, split='train', proportion=[0.7, 0.2, 0.1],
-                 label_weights=np.random.normal(size=23), sample_rate=0.1, numpoints=1024 * 8, need_speed=True,
+    def __init__(self, carla_dir='data/carla_t', transform=None, split='train', proportion=[0.7, 0.2, 0.1],
+                 num_classes=6, sample_rate=0.1, numpoints=1024 * 8, need_speed=True,
                  block_size=1.0):
         self.split = split
         self.proportion = proportion
         # rootpath = os.path.abspath('..')
+        self.num_classes = num_classes
         self.block_size = block_size
         self.carla_dir = os.path.join(carla_dir)
         self.transform = transform
-        self.label_weights = label_weights
+        self.label_weights = np.random.normal(size=num_classes)
         self.numpoints = numpoints
         all_file = os.listdir(self.carla_dir)
         self.need_speed = need_speed
@@ -99,7 +100,7 @@ class CarlaDataset(Dataset):
 
 
 if __name__ == '__main__':
-    point_data = CarlaDataset(carla_dir='../data/carla', split='eval', need_speed=False)
+    point_data = CarlaDataset(carla_dir='../data/carla_t', split='eval', need_speed=False)
     train_loader = DataLoader(point_data, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True,
                               worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
@@ -110,6 +111,6 @@ if __name__ == '__main__':
 
     for i, (input, target) in enumerate(train_loader):
         print(input.shape)
-        print(target.shape)
+        print(target)
 
         break

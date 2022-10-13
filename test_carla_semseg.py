@@ -12,9 +12,10 @@ import logging
 from pathlib import Path
 
 
-classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
-           'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
-    , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
+# classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
+#            'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
+#     , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
+classes = ['Background','Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
 class2label = {cls: i for i, cls in enumerate(classes)}
 seg_classes = class2label
 seg_label_to_cat = {}
@@ -67,7 +68,7 @@ if __name__ == '__main__':
     log_string("The number of test data is: %d" % len(dataset))
 
     # load model
-    numclass = 23
+    numclass = 6
     classifier = get_model(numclass, need_speed=NEED_SPEED).to(device)  # loading model
     criterion = get_loss().to(device)  # loss function
     model_path = './best_model.pth'
@@ -81,10 +82,10 @@ if __name__ == '__main__':
         total_correct = 0
         total_seen = 0
         loss_sum = 0
-        labelweights = np.zeros(23)
-        total_seen_class = [0 for _ in range(23)]
-        total_correct_class = [0 for _ in range(23)]
-        total_iou_deno_class = [0 for _ in range(23)]
+        labelweights = np.zeros(numclass)
+        total_seen_class = [0 for _ in range(numclass)]
+        total_correct_class = [0 for _ in range(numclass)]
+        total_iou_deno_class = [0 for _ in range(numclass)]
         for i, (points, target) in tqdm(enumerate(dataLoader), total=len(dataLoader), smoothing=0.9):
             it_start_time = time.time()
             points = points.data.numpy()
@@ -93,19 +94,19 @@ if __name__ == '__main__':
             points = points.transpose(2, 1)
             seg_pred, trans_feat = classifier(points)
             pred_val = seg_pred.contiguous().cpu().data.numpy()
-            seg_pred = seg_pred.contiguous().view(-1, 23)
+            seg_pred = seg_pred.contiguous().view(-1, numclass)
             batch_label = target.cpu().data.numpy()
             target = target.view(-1, 1)[:, 0]
             pred_val = np.argmax(pred_val, 2)
             it_end_time = time.time()
-            print('iteration time:%.3f', it_end_time - it_start_time)
+            # print('\niteration time:', (it_end_time - it_start_time), '\n')
             correct = np.sum((pred_val == batch_label))
             total_correct += correct
             total_seen += 16 * dataset.numpoints
-            tmp, _ = np.histogram(batch_label, range(24))
+            tmp, _ = np.histogram(batch_label, range(numclass+1))
             labelweights += tmp
 
-            for l in range(0, 23):
+            for l in range(0, numclass):
                 total_seen_class[l] += np.sum((batch_label == l))
                 total_correct_class[l] += np.sum((pred_val == l) & (batch_label == l))
                 total_iou_deno_class[l] += np.sum(((pred_val == l) | (batch_label == l)))
@@ -117,14 +118,14 @@ if __name__ == '__main__':
         #         valid = valid + 1
         #         sum += np.array(total_correct_class[l]) / (np.array(total_iou_deno_class[l], dtype=float) + 1e-6)
         # mIoU = sum / valid
-        mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=np.float) + 1e-6))
+        mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=float) + 1e-6))
         log_string('eval mean loss: %f' % (loss_sum / float(num_batches)))
         log_string('eval point avg class IoU: %f' % mIoU)
         log_string('eval point accuracy: %f' % (total_correct / float(total_seen)))
         iou_per_class_str = '------- IoU --------\n'
         for l in range(numclass):
             iou_per_class_str += 'class %s weight: %f' % (
-                seg_label_to_cat[l] + ' ' * (23 - len(seg_label_to_cat[l])), labelweights[l])
+                seg_label_to_cat[l] + ' ' * (numclass - len(seg_label_to_cat[l])), labelweights[l])
             if total_iou_deno_class[l] != 0:
                 iou_per_class_str += ', IoU: %f \n' % (total_correct_class[l] / float(total_iou_deno_class[l]))
             else:
