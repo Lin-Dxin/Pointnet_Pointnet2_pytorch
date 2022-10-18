@@ -12,15 +12,12 @@ import logging
 from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 
-log_writer = SummaryWriter('./log/')
-
-
 raw_classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
                'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
     , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
 # raw_classes = np.array(raw_classes)
 valid_label = [1, 7, 8, 10, 11]  # carla中有效的点 Building, Road, Sidewalk, Vehicles, Wall
-classes = ['Background','Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
+classes = ['Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
 class2label = {cls: i for i, cls in enumerate(classes)}
 seg_classes = class2label
 seg_label_to_cat = {}
@@ -51,7 +48,8 @@ def weights_init(m):
 
 
 if __name__ == '__main__':
-    NEED_SPEED = False
+    NEED_SPEED = True
+    TSB_RECORD = True
     PROPOTION = [0.7, 0.2, 0.1]
     # prepare for log file
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -77,6 +75,8 @@ if __name__ == '__main__':
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+    if TSB_RECORD:
+        log_writer = SummaryWriter('%s/logs/' % experiment_dir)
 
 
     def log_string(str):
@@ -86,11 +86,11 @@ if __name__ == '__main__':
 
     # train
     # config dataloader
-
-    train_dataset = CarlaDataset(split='train', num_classes=6 ,need_speed=NEED_SPEED, proportion=PROPOTION)
+    numclass = 5
+    train_dataset = CarlaDataset(split='train', num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True)
-    test_dataset = CarlaDataset(split='test', need_speed=NEED_SPEED, proportion=PROPOTION)
+    test_dataset = CarlaDataset(split='test', num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=True, num_workers=0,
                              pin_memory=True, drop_last=True)
     # print(train_dataset.__len__())
@@ -98,7 +98,6 @@ if __name__ == '__main__':
     log_string("The number of training data is: %d" % len(train_dataset))
     log_string("The number of test data is: %d" % len(test_dataset))
 
-    numclass = 6
     classifier = get_model(numclass, need_speed=NEED_SPEED).to(device)  # loading model
     criterion = get_loss().to(device)  # loss function
     classifier.apply(inplace_relu)
@@ -168,11 +167,12 @@ if __name__ == '__main__':
             correct = np.sum(pred_choice == batch_label)
             total_correct += correct
             # total_seen += (16 * 4096)
-            total_seen += 16 * train_dataset.numpoints
+            total_seen += points.shape[0] * points.shape[2]
             loss_sum += loss
             # break
-        log_writer.add_scalar('Loss/train', float(loss_sum / num_batches), epoch)
-        log_writer.add_scalar('ACC/train', total_correct / float(total_seen), epoch)
+        if TSB_RECORD:
+            log_writer.add_scalar('Loss/train', float(loss_sum / num_batches), epoch)
+            log_writer.add_scalar('ACC/train', total_correct / float(total_seen), epoch)
         log_string('Training mean loss: %f' % (loss_sum / num_batches))
         log_string('Training accuracy: %f' % (total_correct / float(total_seen)))
 
@@ -203,7 +203,7 @@ if __name__ == '__main__':
                 pred_val = np.argmax(pred_val, 2)
                 correct = np.sum((pred_val == batch_label))
                 total_correct += correct
-                total_seen += 16 * train_dataset.numpoints
+                total_seen += points.shape[0] * points.shape[2]
                 # print(np.histogram(batch_label, range(24)))
                 tmp, _ = np.histogram(batch_label, range(numclass + 1))
                 labelweights += tmp
@@ -216,14 +216,10 @@ if __name__ == '__main__':
 
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
         mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=float) + 1e-6))
-        log_writer.add_scalar('mIoU/eval', mIoU, epoch)
-        # sum = 0
-        # valid = 0
-        # for l in range(len(total_correct_class)):
-        #     if(total_iou_deno_class != 0):
-        #         valid = valid + 1
-        #         sum += np.array(total_correct_class[l]) / (np.array(total_iou_deno_class[l], dtype=float) + 1e-6)
-        # mIoU = sum / valid
+        if TSB_RECORD:
+            log_writer.add_scalar('mIoU/eval', mIoU, epoch)
+            log_writer.add_scalar('loss/eval', (loss_sum / float(num_batches)), epoch)
+            log_writer.add_scalar('acc/eval', (total_correct / float(total_seen)), epoch)
         log_string('eval mean loss: %f' % (loss_sum / float(num_batches)))
         log_string('eval point avg class IoU: %f' % mIoU)
         log_string('eval point accuracy: %f' % (total_correct / float(total_seen)))

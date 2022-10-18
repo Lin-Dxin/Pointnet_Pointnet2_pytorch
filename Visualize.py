@@ -31,7 +31,7 @@ def visualize_pc(files):
         param = o3d.io.read_pinhole_camera_parameters('viewpoint.json')
         ctr.convert_from_pinhole_camera_parameters(param)
         # pcd = o3d.io.read_point_cloud("./data/carla_txt/" + f, format='xyz')
-        points = np.load("./data/carla/" + f, allow_pickle=True)
+        points = np.load("./data/carla_t/" + f)
         renew_data = [list(raw) for raw in points]
         points = np.asarray(renew_data)
 
@@ -56,13 +56,13 @@ def visualize_pc(files):
 
 
 if __name__ == '__main__':
-    SourceDir = "./data/carla/"
-    TargetDir = "./data/carla_txt/"
+    SourceDir = "./data/carla_t/"
+    TargetDir = "./data/carla_t/"
     Files = os.listdir(SourceDir)
     TFiles = os.listdir(TargetDir)
     # pcd = o3d.io.read_point_cloud(TargetDir+TFiles[400], format='xyz')  # 传入自己当前的pcd文件
     # save_view_point(pcd, "viewpoint.json")  # 保存好得json文件位置
     # load_view_point(pcd, "viewpoint.json")  # 加载修改时较后的pcd文件
     # transform(Files, SourceDir, TargetDir)
-    visualize_pc(Files)
+    visualize_pc(TFiles)
 
