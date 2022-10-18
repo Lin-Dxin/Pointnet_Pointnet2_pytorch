@@ -12,12 +12,22 @@ import logging
 from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 
-raw_classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
+TRANS_LABEL = True
+
+
+if TRANS_LABEL:
+    raw_classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
+                   'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
+        , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
+    # raw_classes = np.array(raw_classes)
+    valid_label = [1, 7, 8, 10, 11]  # carla中有效的点 Building, Road, Sidewalk, Vehicles, Wall
+    classes = ['Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
+    numclass = 5
+else:
+    classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
                'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
-    , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
-# raw_classes = np.array(raw_classes)
-valid_label = [1, 7, 8, 10, 11]  # carla中有效的点 Building, Road, Sidewalk, Vehicles, Wall
-classes = ['Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
+        , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
+    numclass = 23
 class2label = {cls: i for i, cls in enumerate(classes)}
 seg_classes = class2label
 seg_label_to_cat = {}
@@ -86,7 +96,7 @@ if __name__ == '__main__':
 
     # train
     # config dataloader
-    numclass = 5
+
     train_dataset = CarlaDataset(split='train', num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True)
