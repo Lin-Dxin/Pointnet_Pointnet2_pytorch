@@ -9,9 +9,9 @@ import tqdm
 
 
 class CarlaDataset(Dataset):
-    label_weights = np.random.normal(size=5)
+    # label_weights = np.random.normal(size=5)
 
-    def __init__(self, carla_dir='data/carla_t', transform=None, split='train', proportion=[0.7, 0.2, 0.1],
+    def __init__(self, carla_dir='data/carla', transform=None, split='train', proportion=[0.7, 0.2, 0.1],
                  num_classes=5, sample_rate=0.1, numpoints=1024 * 8, need_speed=True,
                  block_size=1.0):
         self.split = split

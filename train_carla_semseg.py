@@ -118,7 +118,7 @@ if __name__ == '__main__':
     MOMENTUM_ORIGINAL = 0.1
     MOMENTUM_DECCAY = 0.5
     MOMENTUM_DECCAY_STEP = step_size
-    temp = CarlaDataset.label_weights
+    temp = np.random.normal(size=numclass)
     weights = torch.Tensor(temp).to(device)
 
     optimizer = torch.optim.Adam(
