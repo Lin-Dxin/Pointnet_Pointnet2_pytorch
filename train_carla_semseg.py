@@ -2,7 +2,7 @@ from data_utils.CarlaDataLoader_npy import CarlaDataset
 from torch.utils.data import DataLoader
 import numpy as np
 import time
-from models.pointnet_semseg_carla import get_model, get_loss
+from models.pointnet2_semseg_carla import get_model, get_loss
 import torch
 from tqdm import tqdm
 import datetime
@@ -13,6 +13,9 @@ from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 
 TRANS_LABEL = True
+_carla_dir = 'data/carla_t'
+NEED_SPEED = True
+TSB_RECORD = False
 
 
 if TRANS_LABEL:
@@ -58,8 +61,7 @@ def weights_init(m):
 
 
 if __name__ == '__main__':
-    NEED_SPEED = True
-    TSB_RECORD = True
+
     PROPOTION = [0.7, 0.2, 0.1]
     # prepare for log file
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -97,10 +99,10 @@ if __name__ == '__main__':
     # train
     # config dataloader
 
-    train_dataset = CarlaDataset(split='train', num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
+    train_dataset = CarlaDataset(split='train', carla_dir=_carla_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True)
-    test_dataset = CarlaDataset(split='test', num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
+    test_dataset = CarlaDataset(split='test', carla_dir=_carla_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=True, num_workers=0,
                              pin_memory=True, drop_last=True)
     # print(train_dataset.__len__())

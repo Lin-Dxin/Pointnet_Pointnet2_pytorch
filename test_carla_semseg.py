@@ -11,11 +11,20 @@ import sys
 import logging
 from pathlib import Path
 
-
-# classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
-#            'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
-#     , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
-classes = ['Background','Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
+TRANS_LABEL = True
+if TRANS_LABEL:
+    raw_classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
+                   'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
+        , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
+    # raw_classes = np.array(raw_classes)
+    valid_label = [1, 7, 8, 10, 11]  # carla中有效的点 Building, Road, Sidewalk, Vehicles, Wall
+    classes = ['Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
+    numclass = 5
+else:
+    classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
+               'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
+        , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
+    numclass = 23
 class2label = {cls: i for i, cls in enumerate(classes)}
 seg_classes = class2label
 seg_label_to_cat = {}
@@ -29,7 +38,7 @@ ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 
 if __name__ == '__main__':
-    NEED_SPEED = False
+    NEED_SPEED = True
     PROPOTION = [0.7, 0.2, 0.1]
     # prepare for log file
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -61,14 +70,15 @@ if __name__ == '__main__':
         logger.info(str)
         print(str)
 
+
     # config dataset and data Loader
     dataset = CarlaDataset(split='eval', need_speed=NEED_SPEED, proportion=PROPOTION)
     dataLoader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0,
-                             pin_memory=True, drop_last=True)
+                            pin_memory=True, drop_last=True)
     log_string("The number of test data is: %d" % len(dataset))
 
     # load model
-    numclass = 6
+    # numclass = 5
     classifier = get_model(numclass, need_speed=NEED_SPEED).to(device)  # loading model
     criterion = get_loss().to(device)  # loss function
     model_path = './best_model.pth'
@@ -102,8 +112,8 @@ if __name__ == '__main__':
             # print('\niteration time:', (it_end_time - it_start_time), '\n')
             correct = np.sum((pred_val == batch_label))
             total_correct += correct
-            total_seen += 16 * dataset.numpoints
-            tmp, _ = np.histogram(batch_label, range(numclass+1))
+            total_seen += points.shape[0] * points.shape[2]
+            tmp, _ = np.histogram(batch_label, range(numclass + 1))
             labelweights += tmp
 
             for l in range(0, numclass):
@@ -136,5 +146,3 @@ if __name__ == '__main__':
         log_string('Spending Time: %f' % spd_time)
         log_string('Eval accuracy: %f' % (total_correct / float(total_seen)))
         log_string('Eval mIoU: %f' % mIoU)
-
-
