@@ -38,6 +38,8 @@ class CarlaDataset(Dataset):
         if split == 'eval':
             print('Eval Scene Data Loading..')
             all_file = all_file[test_offset:eval_offset]
+        if split == 'whole':
+            print('Whole Scene Data Loading..')
 
         self.file_list = all_file
         self.file_len = len(all_file)
@@ -45,7 +47,7 @@ class CarlaDataset(Dataset):
         num_all_point = []
         for file_name in all_file:
             path = os.path.join(self.carla_dir, file_name)
-            data = np.load(path)
+            data = np.load(path, allow_pickle=True)
             num_all_point.append(len(data))  # 记录点云数
 
         sample_prob = num_all_point / np.sum(num_all_point)
@@ -100,17 +102,33 @@ class CarlaDataset(Dataset):
 
 
 if __name__ == '__main__':
-    point_data = CarlaDataset(carla_dir='../data/carla_t', split='eval', need_speed=False)
+    point_data = CarlaDataset(carla_dir='data\lidar_data_1018', split='whole', need_speed=False)
     train_loader = DataLoader(point_data, batch_size=16, shuffle=True, num_workers=0,
                               pin_memory=True, drop_last=True,
                               worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
 
-    print('point data size:', point_data.__len__())
-    print('point data 0 shape:', point_data.__getitem__(0)[0].shape)
-    print('point label 0 shape:', point_data.__getitem__(0)[1].shape)
+    # print('point data size:', point_data.__len__())
+    # print('point data 0 shape:', point_data.__getitem__(0)[0].shape)
+    # print('point label 0 shape:', point_data.__getitem__(0)[1].shape)
+    classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
+               'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
+        , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
+    numclass = 23
+    labelweights = np.zeros(numclass)
+    class2label = {cls: i for i, cls in enumerate(classes)}
+    seg_classes = class2label
+    seg_label_to_cat = {}
+    for i, cat in enumerate(seg_classes.keys()):
+        seg_label_to_cat[i] = cat
+
+
 
     for i, (input, target) in enumerate(train_loader):
-        print(input.shape)
-        print(target)
+        batch_label = target.cpu().data.numpy()
+        tmp, _ = np.histogram(batch_label, range(numclass + 1))
+        labelweights += tmp
 
-        break
+    labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
+    for l in range(numclass):
+        print('class %s weight: %.3f' % (
+            seg_label_to_cat[l] + ' ' * (numclass - len(seg_label_to_cat[l])), labelweights[l]))

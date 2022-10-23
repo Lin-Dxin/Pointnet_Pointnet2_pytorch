@@ -13,9 +13,9 @@ from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 
 TRANS_LABEL = True
-_carla_dir = 'data/carla_t'
-NEED_SPEED = True
-TSB_RECORD = False
+_carla_dir = 'data/carla_expand'
+NEED_SPEED = False
+TSB_RECORD = True
 
 
 if TRANS_LABEL:
@@ -23,9 +23,10 @@ if TRANS_LABEL:
                    'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
         , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
     # raw_classes = np.array(raw_classes)
-    valid_label = [1, 7, 8, 10, 11]  # carla中有效的点 Building, Road, Sidewalk, Vehicles, Wall
+    valid_label = [1, 4, 5, 7, 8, 9, 10, 11]
+    trans_label = [0, 1, 2, 3, 4, 5, 6, 7]
     classes = ['Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
-    numclass = 5
+    numclass = len(valid_label)
 else:
     classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
                'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
