@@ -2,7 +2,7 @@ from data_utils.CarlaDataLoader_npy import CarlaDataset
 from torch.utils.data import DataLoader
 import numpy as np
 import time
-from models.pointnet2_semseg_carla import get_model, get_loss
+
 import torch
 from tqdm import tqdm
 import datetime
@@ -14,9 +14,13 @@ from torch.utils.tensorboard import SummaryWriter
 
 TRANS_LABEL = True
 _carla_dir = 'data/carla_expand'
-NEED_SPEED = False
+NEED_SPEED = True
 TSB_RECORD = True
-
+Model = "pointnet"
+if Model == "pointnet2":
+    from models.pointnet2_semseg_carla import get_model, get_loss
+else:
+    from models.pointnet_semseg_carla import get_model, get_loss
 
 if TRANS_LABEL:
     raw_classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
@@ -25,7 +29,9 @@ if TRANS_LABEL:
     # raw_classes = np.array(raw_classes)
     valid_label = [1, 4, 5, 7, 8, 9, 10, 11]
     trans_label = [0, 1, 2, 3, 4, 5, 6, 7]
-    classes = ['Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
+    classes = [raw_classes[i] for i in valid_label]
+    # classes = ['Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
+    # print(classes)
     numclass = len(valid_label)
 else:
     classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
@@ -65,7 +71,7 @@ if __name__ == '__main__':
 
     PROPOTION = [0.7, 0.2, 0.1]
     # prepare for log file
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
     timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
     experiment_dir = Path('./log/')
     experiment_dir.mkdir(exist_ok=True)
@@ -108,6 +114,7 @@ if __name__ == '__main__':
                              pin_memory=True, drop_last=True)
     # print(train_dataset.__len__())
     # print(test_dataset.__len__())
+    log_string("Using Model:%s" % Model)
     log_string("The number of training data is: %d" % len(train_dataset))
     log_string("The number of test data is: %d" % len(test_dataset))
 
@@ -168,6 +175,8 @@ if __name__ == '__main__':
             points = points.transpose(2, 1)
 
             seg_pred, trans_feat = classifier(points)
+            seg_pred = seg_pred.to(device)
+            trans_feat = trans_feat.to(device)
             seg_pred = seg_pred.contiguous().view(-1, numclass)
 
             batch_label = target.view(-1, 1)[:, 0].cpu().data.numpy()
