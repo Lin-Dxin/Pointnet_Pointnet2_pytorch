@@ -14,9 +14,12 @@ from torch.utils.tensorboard import SummaryWriter
 
 TRANS_LABEL = True
 _carla_dir = 'data/carla_expand'
-NEED_SPEED = True
+NEED_SPEED = False
 TSB_RECORD = True
-Model = "pointnet"
+Model = "pointnet2"
+epoch_num = 50
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 if Model == "pointnet2":
     from models.pointnet2_semseg_carla import get_model, get_loss
 else:
@@ -64,7 +67,7 @@ if __name__ == '__main__':
 
     PROPOTION = [0.7, 0.2, 0.1]
     # prepare for log file
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    
     timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
     experiment_dir = Path('./log/')
     experiment_dir.mkdir(exist_ok=True)
@@ -108,6 +111,7 @@ if __name__ == '__main__':
     # print(train_dataset.__len__())
     # print(test_dataset.__len__())
     log_string("Using Model:%s" % Model)
+    log_string("Using 4D data:%s" % NEED_SPEED)
     log_string("The number of training data is: %d" % len(train_dataset))
     log_string("The number of test data is: %d" % len(test_dataset))
 
@@ -151,7 +155,7 @@ if __name__ == '__main__':
             m.momentum = momentum
 
 
-    epoch_num = 32
+    
     best_iou = 0
     for epoch in range(epoch_num):
         log_string('**** Epoch %d  ****' % (epoch + 1))
