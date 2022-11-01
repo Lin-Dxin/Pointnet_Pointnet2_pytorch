@@ -2,7 +2,7 @@ from data_utils.CarlaDataLoader_npy import CarlaDataset
 from torch.utils.data import DataLoader
 import numpy as np
 import time
-from models.pointnet_semseg_carla import get_model, get_loss
+# from models.pointnet_semseg_carla import get_model, get_loss
 import torch
 from tqdm import tqdm
 import datetime
@@ -12,14 +12,26 @@ import logging
 from pathlib import Path
 
 TRANS_LABEL = True
+NEED_SPEED = True
+CARLA_DIR = './data/carla_expand'
+Model = 'pointnet2'
+
+if Model == "pointnet2":
+    from models.pointnet2_semseg_carla import get_model, get_loss
+else:
+    from models.pointnet_semseg_carla import get_model, get_loss
+
 if TRANS_LABEL:
     raw_classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
                    'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
         , 'RailTrack', 'GuardRail', 'TrafficLight', 'Static', 'Dynamic', 'Water', 'Terrain']
     # raw_classes = np.array(raw_classes)
-    valid_label = [1, 7, 8, 10, 11]  # carla中有效的点 Building, Road, Sidewalk, Vehicles, Wall
-    classes = ['Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
-    numclass = 5
+    valid_label = [1, 4, 5, 7, 8, 9, 10, 11]
+    trans_label = [0, 1, 2, 3, 4, 5, 6, 7]
+    classes = [raw_classes[i] for i in valid_label]
+    # classes = ['Building', 'Road', 'Sidewalk', 'Vehicles', 'Wall']  # 最终标签列表
+    # print(classes)
+    numclass = len(valid_label)
 else:
     classes = ['Unlabeled', 'Building', 'Fence', 'Other', 'Pedestrian', 'Pole', 'RoadLine', 'Road',
                'SideWalk', 'Vegetation', 'Vehicles', 'Wall', 'TrafficSign', 'Sky', 'Ground', 'Bridge'
@@ -38,7 +50,7 @@ ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 
 if __name__ == '__main__':
-    NEED_SPEED = True
+
     PROPOTION = [0.7, 0.2, 0.1]
     # prepare for log file
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -72,7 +84,7 @@ if __name__ == '__main__':
 
 
     # config dataset and data Loader
-    dataset = CarlaDataset(split='eval', need_speed=NEED_SPEED, proportion=PROPOTION)
+    dataset = CarlaDataset(split='eval', carla_dir=CARLA_DIR, need_speed=NEED_SPEED, proportion=PROPOTION)
     dataLoader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0,
                             pin_memory=True, drop_last=True)
     log_string("The number of test data is: %d" % len(dataset))

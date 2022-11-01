@@ -57,21 +57,14 @@ def inplace_relu(m):
         m.inplace = True
 
 
-def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv2d') != -1:
-        torch.nn.init.xavier_normal_(m.weight.data)
-        torch.nn.init.constant_(m.bias.data, 0.0)
-    elif classname.find('Linear') != -1:
-        torch.nn.init.xavier_normal_(m.weight.data)
-        torch.nn.init.constant_(m.bias.data, 0.0)
+
 
 
 if __name__ == '__main__':
 
     PROPOTION = [0.7, 0.2, 0.1]
     # prepare for log file
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
     experiment_dir = Path('./log/')
     experiment_dir.mkdir(exist_ok=True)
@@ -119,6 +112,19 @@ if __name__ == '__main__':
     log_string("The number of test data is: %d" % len(test_dataset))
 
     classifier = get_model(numclass, need_speed=NEED_SPEED).to(device)  # loading model
+
+
+    def weights_init(m):
+        classname = m.__class__.__name__
+        if classname.find('Conv2d') != -1:
+            torch.nn.init.xavier_normal_(m.weight.data)
+            torch.nn.init.constant_(m.bias.data, 0.0)
+        elif classname.find('Linear') != -1:
+            torch.nn.init.xavier_normal_(m.weight.data)
+            torch.nn.init.constant_(m.bias.data, 0.0)
+
+
+    classifier = classifier.apply(weights_init)
     criterion = get_loss().to(device)  # loss function
     classifier.apply(inplace_relu)
     learning_rate = 0.001
