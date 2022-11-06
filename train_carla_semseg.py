@@ -16,9 +16,20 @@ TRANS_LABEL = True
 _carla_dir = 'data/carla_expand'
 NEED_SPEED = False
 TSB_RECORD = True
-Model = "pointnet2"
+pretrain = True
+Model = "pointnet"
 epoch_num = 50
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+SAVE_INIT = False
+LOAD_INIT = True
+model_path = './3D_pn_initial_state.pth'
+K_FOLD = True
+if K_FOLD:
+    train_data_dir = './data/carla_scene_01/TrainAndValidateData_4/train'
+    validate_data_dir = './data/carla_scene_01/TrainAndValidateData_4/validate'
+    partition = 4
+    model_info = '3D_pn_part4'
+
 
 if Model == "pointnet2":
     from models.pointnet2_semseg_carla import get_model, get_loss
@@ -73,7 +84,10 @@ if __name__ == '__main__':
     experiment_dir.mkdir(exist_ok=True)
     experiment_dir = experiment_dir.joinpath('sem_seg')
     experiment_dir.mkdir(exist_ok=True)
-    experiment_dir = experiment_dir.joinpath(timestr)
+    if K_FOLD:
+        experiment_dir = experiment_dir.joinpath(model_info)
+    else:
+        experiment_dir = experiment_dir.joinpath(timestr)
     experiment_dir.mkdir(exist_ok=True)
     checkpoints_dir = experiment_dir.joinpath('checkpoints/')
     checkpoints_dir.mkdir(exist_ok=True)
@@ -102,12 +116,20 @@ if __name__ == '__main__':
     # train
     # config dataloader
 
-    train_dataset = CarlaDataset(split='train', carla_dir=_carla_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
-    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
-                              pin_memory=True, drop_last=True)
-    test_dataset = CarlaDataset(split='test', carla_dir=_carla_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
-    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=True, num_workers=0,
-                             pin_memory=True, drop_last=True)
+    if K_FOLD:
+        train_dataset = CarlaDataset(split='whole', carla_dir=train_data_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
+        train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
+                                pin_memory=True, drop_last=True)
+        test_dataset = CarlaDataset(split='whole', carla_dir=validate_data_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
+        test_loader = DataLoader(test_dataset, batch_size=16, shuffle=True, num_workers=0,
+                                pin_memory=True, drop_last=True)
+    else:
+        train_dataset = CarlaDataset(split='train', carla_dir=_carla_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
+        train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
+                                pin_memory=True, drop_last=True)
+        test_dataset = CarlaDataset(split='test', carla_dir=_carla_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
+        test_loader = DataLoader(test_dataset, batch_size=16, shuffle=True, num_workers=0,
+                                pin_memory=True, drop_last=True)
     # print(train_dataset.__len__())
     # print(test_dataset.__len__())
     log_string("Using Model:%s" % Model)
@@ -115,20 +137,34 @@ if __name__ == '__main__':
     log_string("The number of training data is: %d" % len(train_dataset))
     log_string("The number of test data is: %d" % len(test_dataset))
 
-    classifier = get_model(numclass, need_speed=NEED_SPEED).to(device)  # loading model
+        
+    classifier = get_model(numclass, need_speed=NEED_SPEED).to(device)  # loading model\
 
+    if LOAD_INIT:
+        checkpoint = torch.load(model_path)
+    else:
+        def weights_init(m):
+            classname = m.__class__.__name__
+            if classname.find('Conv2d') != -1:
+                torch.nn.init.xavier_normal_(m.weight.data)
+                torch.nn.init.constant_(m.bias.data, 0.0)
+            elif classname.find('Linear') != -1:
+                torch.nn.init.xavier_normal_(m.weight.data)
+                torch.nn.init.constant_(m.bias.data, 0.0)
 
-    def weights_init(m):
-        classname = m.__class__.__name__
-        if classname.find('Conv2d') != -1:
-            torch.nn.init.xavier_normal_(m.weight.data)
-            torch.nn.init.constant_(m.bias.data, 0.0)
-        elif classname.find('Linear') != -1:
-            torch.nn.init.xavier_normal_(m.weight.data)
-            torch.nn.init.constant_(m.bias.data, 0.0)
+        classifier = classifier.apply(weights_init)
+    # save initial model
+    if SAVE_INIT is True:
+        initial_state = {
+                'model_state_dict': classifier.state_dict(),
+            }
+        init_savepath = str(checkpoints_dir) + '/initial_state.pth'
+        torch.save(initial_state, init_savepath)
+        log_string('Saving model at %s' %init_savepath)
+        log_string('Shuting down')
+        sys.exit()
+        
 
-
-    classifier = classifier.apply(weights_init)
     criterion = get_loss().to(device)  # loss function
     classifier.apply(inplace_relu)
     learning_rate = 0.001
@@ -157,6 +193,12 @@ if __name__ == '__main__':
 
     
     best_iou = 0
+
+    train_acc = []
+    train_loss = []
+    validate_acc = []
+    validate_loss = []
+    validate_miou = []
     for epoch in range(epoch_num):
         log_string('**** Epoch %d  ****' % (epoch + 1))
         start_time = time.time()
@@ -207,7 +249,8 @@ if __name__ == '__main__':
             log_writer.add_scalar('ACC/train', total_correct / float(total_seen), epoch)
         log_string('Training mean loss: %f' % (loss_sum / num_batches))
         log_string('Training accuracy: %f' % (total_correct / float(total_seen)))
-
+        train_acc.append((total_correct / float(total_seen)))
+        train_loss.append((loss_sum / num_batches))
         with torch.no_grad():
             num_batches = len(test_loader)
             total_correct = 0
@@ -255,6 +298,9 @@ if __name__ == '__main__':
         log_string('eval mean loss: %f' % (loss_sum / float(num_batches)))
         log_string('eval point avg class IoU: %f' % mIoU)
         log_string('eval point accuracy: %f' % (total_correct / float(total_seen)))
+        validate_acc.append((total_correct / float(total_seen)))
+        validate_miou.append(mIoU)
+        validate_loss.append((loss_sum / float(num_batches)))
         # log_string('eval point avg class acc: %f' % (
         #     np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=float) + 1e-6))))
         iou_per_class_str = '------- IoU --------\n'
@@ -285,3 +331,14 @@ if __name__ == '__main__':
             torch.save(state, savepath)
             log_string('Saving model....')
         log_string('Best mIoU: %f' % best_iou)
+    if K_FOLD:
+        eval_save_path = str(checkpoints_dir) + '/evaluation_data.pth'
+        log_string('Save evaluation data at %s' %eval_save_path)
+        evaluation = {
+            'train_acc' : train_acc,
+            'train_loss' : train_loss,
+            'validate_acc' : validate_acc,
+            'validate_loss' : validate_loss,
+            'validate_miou' : validate_miou
+        }
+        torch.save(evaluation, eval_save_path)
