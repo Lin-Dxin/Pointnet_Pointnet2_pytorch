@@ -19,16 +19,18 @@ TSB_RECORD = True
 pretrain = True
 Model = "pointnet"
 epoch_num = 50
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 SAVE_INIT = False
 LOAD_INIT = True
 model_path = './3D_pn_initial_state.pth'
 K_FOLD = True
 if K_FOLD:
-    train_data_dir = './data/carla_scene_01/TrainAndValidateData_4/train'
-    validate_data_dir = './data/carla_scene_01/TrainAndValidateData_4/validate'
-    partition = 4
-    model_info = '3D_pn_part4'
+    partition = 2 # 0 - 9
+    partition_str = str(partition)
+    train_data_dir = './data/carla_scene_01/TrainAndValidateData_'+ partition_str+ '/train'
+    validate_data_dir = './data/carla_scene_01/TrainAndValidateData_'+ partition_str+ '/validate'
+    
+    model_info = '3D_pn_part'+ partition_str  # 与上面相同
 
 
 if Model == "pointnet2":
