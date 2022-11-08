@@ -19,13 +19,13 @@ TSB_RECORD = True
 pretrain = True
 Model = "pointnet"
 epoch_num = 50
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 SAVE_INIT = False
 LOAD_INIT = True
 model_path = './3D_pn_initial_state.pth'
 K_FOLD = True
 if K_FOLD:
-    partition = 2 # 0 - 9
+    partition = 3 # 0 - 9
     partition_str = str(partition)
     train_data_dir = './data/carla_scene_01/TrainAndValidateData_'+ partition_str+ '/train'
     validate_data_dir = './data/carla_scene_01/TrainAndValidateData_'+ partition_str+ '/validate'
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     classifier = get_model(numclass, need_speed=NEED_SPEED).to(device)  # loading model\
 
     if LOAD_INIT:
-        checkpoint = torch.load(model_path)
+        checkpoint = torch.load(model_path,map_location = device)
     else:
         def weights_init(m):
             classname = m.__class__.__name__
