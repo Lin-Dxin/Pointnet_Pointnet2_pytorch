@@ -14,19 +14,21 @@ class CarlaDataset(Dataset):
     def __init__(self, carla_dir, transform=None, split='train', proportion=[0.7, 0.2, 0.1],
                  num_classes=5, sample_rate=0.1, numpoints=1024 * 8, need_speed=True,
                  block_size=1.0):
-        self.split = split
-        self.proportion = proportion
+        
+        self.split = split  # 区分训练集或者测试集（当数据按文件划分后，可以用whole读取所有数据
+        self.proportion = proportion  # 数据划分比例
+
         # rootpath = os.path.abspath('..')
-        self.num_classes = num_classes
-        self.block_size = block_size
-        self.carla_dir = os.path.join(carla_dir)
-        self.transform = transform
-        self.label_weights = np.random.normal(size=num_classes)
-        self.numpoints = numpoints
-        all_file = os.listdir(self.carla_dir)
-        self.need_speed = need_speed
+        self.num_classes = num_classes  # 语义类别数
+        self.block_size = block_size  # 用于重采样的重采样块大小
+        self.carla_dir = os.path.join(carla_dir)  # 数据路径
+        self.transform = transform # 用于数据强化，主要是旋转、裁剪数据（目前尚未使用
+        self.label_weights = np.random.normal(size=num_classes)  # 用于记录数据分布（指各个语义标签的数据占总体数据的比例）
+        self.numpoints = numpoints  # 单帧中采样的点数
+        all_file = os.listdir(self.carla_dir)  # 用于记录数据量
+        self.need_speed = need_speed  # 用于区分是否使用速度维度
         datanum = len(all_file)
-        train_offset = int(datanum * proportion[0])
+        train_offset = int(datanum * proportion[0])   # 以下三行为按照propotion划分各个部分的数据量
         test_offset = int(datanum * proportion[1]) + train_offset
         eval_offset = int(datanum * proportion[2]) + test_offset
         if split == 'train':
@@ -38,7 +40,7 @@ class CarlaDataset(Dataset):
         if split == 'eval':
             print('Eval Scene Data Loading..')
             all_file = all_file[test_offset:eval_offset]
-        if split == 'whole':
+        if split == 'whole':  # 使用当前目录下的全部数据
             print('Whole Scene Data Loading..')
 
         self.file_list = all_file
@@ -50,11 +52,14 @@ class CarlaDataset(Dataset):
             data = np.load(path, allow_pickle=True)
             num_all_point.append(len(data))  # 记录点云数
 
-        sample_prob = num_all_point / np.sum(num_all_point)
-        num_iter = int(np.sum(num_all_point) * sample_rate / numpoints)
+        sample_prob = num_all_point / np.sum(num_all_point)  # 单帧中包含的点云数占所有帧的数据点云数的比例
+        num_iter = int(np.sum(num_all_point) * sample_rate / numpoints)  
         room_idxs = []
         for index in range(self.file_len):
-            room_idxs.extend([index] * int(round((sample_prob[index]) * num_iter)))
+            room_idxs.extend([index] * int(round((sample_prob[index]) * num_iter)))  
+            #  对点云数多的帧进行重采样（room_idx用于遍历所有数据，重采样可能后会重复采点云数较多的某一帧）
+            #  例子：0,0,1,2,2,2……  在该例子中  1号帧点云数 < 0号帧点云数 < 3号帧点云数
+            #  后续DataLoader遍历过程中会多次采样0号帧以及3号帧
         self.room_idxs = np.array(room_idxs)
         print("Totally {} samples in {} set.".format(len(self.room_idxs), split))
 
@@ -76,6 +81,9 @@ class CarlaDataset(Dataset):
         N_points = len(label)
         cnt = 0
         while True:
+            # 对一帧内的点进行随机采样
+            # 随机选择三个点，并在三个点的周围划定区域，Block_Size决定了区域大小
+            # 最终输出数据为Block内的点云
             center = point[np.random.choice(N_points)][:3]
             block_min = center - [self.block_size / 2.0, self.block_size / 2.0, 0]
             block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
@@ -89,6 +97,7 @@ class CarlaDataset(Dataset):
                 # print("success! with cnt:")
                 # print(cnt)
                 break
+        
         if point_idxs.size >= self.numpoints:
             selected_point_idxs = np.random.choice(point_idxs, self.numpoints, replace=False)
         else:

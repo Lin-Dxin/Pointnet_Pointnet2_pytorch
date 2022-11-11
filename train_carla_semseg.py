@@ -13,24 +13,27 @@ from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 
 TRANS_LABEL = True
-_carla_dir = 'data/carla_expand'
-NEED_SPEED = False
+_carla_dir = 'data/carla_expand'  # 若不使用Kflod则该目录为主
+NEED_SPEED = True
 TSB_RECORD = True
 pretrain = True
-Model = "pointnet"
-epoch_num = 50
+Model = "pointnet2"
+epoch_num = 25
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-SAVE_INIT = False
-LOAD_INIT = True
-model_path = './3D_pn_initial_state.pth'
+SAVE_INIT = False  # 将这个选项设为True、Load_Init设为False 可以在log/checkpoint/初始化生成一个initial_state.pth的初始化模型
+LOAD_INIT = True  # 不能与Save_Init相同
+model_path = './4D_pn2_initial_state.pth'  # 需要一个初始化模型
 K_FOLD = True
+
 if K_FOLD:
-    partition = 3 # 0 - 9
+    partition = 0 # 0 - 9
     partition_str = str(partition)
-    train_data_dir = './data/carla_scene_01/TrainAndValidateData_'+ partition_str+ '/train'
+    train_data_dir = './data/carla_scene_01/TrainAndValidateData_'+ partition_str+ '/train'  
+    # 需要有TrainAndValidateData_0、TrainAndValidateData_1 …… TrainAndValidateData_9 十个文件夹存放各个分布的数据
     validate_data_dir = './data/carla_scene_01/TrainAndValidateData_'+ partition_str+ '/validate'
-    
-    model_info = '3D_pn_part'+ partition_str  # 与上面相同
+    # model_info需要自己修改成对应的实验标题
+    model_info = '4D_pn_part' + partition_str  # 最好能区分是否4D数据、使用pn或者pn++ 例：3D_pn2_part
+    # 不用自行添加partition，已经记录下来了
 
 
 if Model == "pointnet2":
@@ -334,7 +337,7 @@ if __name__ == '__main__':
             log_string('Saving model....')
         log_string('Best mIoU: %f' % best_iou)
     if K_FOLD:
-        eval_save_path = str(checkpoints_dir) + '/evaluation_data.pth'
+        eval_save_path = str(checkpoints_dir) + '/evaluation_data%s'% partition_str + '.pth'
         log_string('Save evaluation data at %s' %eval_save_path)
         evaluation = {
             'train_acc' : train_acc,

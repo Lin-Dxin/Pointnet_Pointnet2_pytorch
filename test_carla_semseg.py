@@ -12,10 +12,10 @@ import logging
 from pathlib import Path
 
 TRANS_LABEL = True
-NEED_SPEED = True
-CARLA_DIR = './data/carla_expand'
-Model = 'pointnet2'
-
+NEED_SPEED = False
+CARLA_DIR = './data/carla_scene_01/TestData/'
+Model = 'pointnet'
+model_path = './3dbest_model.pth'
 if Model == "pointnet2":
     from models.pointnet2_semseg_carla import get_model, get_loss
 else:
@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
 
     # config dataset and data Loader
-    dataset = CarlaDataset(split='eval', carla_dir=CARLA_DIR, need_speed=NEED_SPEED, proportion=PROPOTION)
+    dataset = CarlaDataset(split='whole', carla_dir=CARLA_DIR, need_speed=NEED_SPEED, proportion=PROPOTION)
     dataLoader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0,
                             pin_memory=True, drop_last=True)
     log_string("The number of test data is: %d" % len(dataset))
@@ -93,8 +93,8 @@ if __name__ == '__main__':
     # numclass = 5
     classifier = get_model(numclass, need_speed=NEED_SPEED).to(device)  # loading model
     criterion = get_loss().to(device)  # loss function
-    model_path = './best_model.pth'
-    checkpoint = torch.load(model_path)
+    
+    checkpoint = torch.load(model_path, map_location=device)
     classifier.load_state_dict(checkpoint['model_state_dict'])
     classifier = classifier.eval()
 
@@ -141,7 +141,7 @@ if __name__ == '__main__':
         #         sum += np.array(total_correct_class[l]) / (np.array(total_iou_deno_class[l], dtype=float) + 1e-6)
         # mIoU = sum / valid
         mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_deno_class, dtype=float) + 1e-6))
-        log_string('eval mean loss: %f' % (loss_sum / float(num_batches)))
+        # log_string('eval mean loss: %f' % (loss_sum / float(num_batches)))
         log_string('eval point avg class IoU: %f' % mIoU)
         log_string('eval point accuracy: %f' % (total_correct / float(total_seen)))
         iou_per_class_str = '------- IoU --------\n'
