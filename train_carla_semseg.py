@@ -13,19 +13,20 @@ from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 
 TRANS_LABEL = True
-_carla_dir = 'data/carla_expand'  # 若不使用Kflod则该目录为主
+_carla_dir = 'data/carla_scene_02_unnorm'  # 若不使用Kflod则该目录为主
 NEED_SPEED = True
 TSB_RECORD = True
-pretrain = True
-Model = "pointnet2"
+Model = "pointnet"
 epoch_num = 25
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-SAVE_INIT = False  # 将这个选项设为True、Load_Init设为False 可以在log/checkpoint/初始化生成一个initial_state.pth的初始化模型
-LOAD_INIT = True  # 不能与Save_Init相同
-model_path = './4D_pn2_initial_state.pth'  # 需要一个初始化模型
-K_FOLD = True
 
+model_path = './4D_pn2_initial_state.pth'  # 需要一个初始化模型
+K_FOLD = False
+SAVE_INIT = False  # 将这个选项设为True、Load_Init设为False 可以在log/checkpoint/初始化生成一个initial_state.pth的初始化模型
+LOAD_INIT = False  # 不能与Save_Init相同
+DATA_RESAMPLE = True
 if K_FOLD:
+    
     partition = 0 # 0 - 9
     partition_str = str(partition)
     train_data_dir = './data/carla_scene_01/TrainAndValidateData_'+ partition_str+ '/train'  
@@ -122,17 +123,17 @@ if __name__ == '__main__':
     # config dataloader
 
     if K_FOLD:
-        train_dataset = CarlaDataset(split='whole', carla_dir=train_data_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
+        train_dataset = CarlaDataset(split='whole', carla_dir=train_data_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION,resample=DATA_RESAMPLE)
         train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
                                 pin_memory=True, drop_last=True)
-        test_dataset = CarlaDataset(split='whole', carla_dir=validate_data_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
+        test_dataset = CarlaDataset(split='whole', carla_dir=validate_data_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION,resample=DATA_RESAMPLE)
         test_loader = DataLoader(test_dataset, batch_size=16, shuffle=True, num_workers=0,
                                 pin_memory=True, drop_last=True)
     else:
-        train_dataset = CarlaDataset(split='train', carla_dir=_carla_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
+        train_dataset = CarlaDataset(split='train', carla_dir=_carla_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION,resample=DATA_RESAMPLE)
         train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0,
                                 pin_memory=True, drop_last=True)
-        test_dataset = CarlaDataset(split='test', carla_dir=_carla_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION)
+        test_dataset = CarlaDataset(split='test', carla_dir=_carla_dir, num_classes=numclass, need_speed=NEED_SPEED, proportion=PROPOTION,resample=DATA_RESAMPLE)
         test_loader = DataLoader(test_dataset, batch_size=16, shuffle=True, num_workers=0,
                                 pin_memory=True, drop_last=True)
     # print(train_dataset.__len__())
@@ -144,10 +145,13 @@ if __name__ == '__main__':
 
         
     classifier = get_model(numclass, need_speed=NEED_SPEED).to(device)  # loading model\
-
+    
     if LOAD_INIT:
         checkpoint = torch.load(model_path,map_location = device)
+        classifier = classifier.load_state_dict(checkpoint['model_state_dict'])
+        state_epoch = checkpoint['epoch']
     else:
+        state_epoch = 0
         def weights_init(m):
             classname = m.__class__.__name__
             if classname.find('Conv2d') != -1:
@@ -204,7 +208,7 @@ if __name__ == '__main__':
     validate_acc = []
     validate_loss = []
     validate_miou = []
-    for epoch in range(epoch_num):
+    for epoch in range(state_epoch, epoch_num):
         log_string('**** Epoch %d  ****' % (epoch + 1))
         start_time = time.time()
         lr = max(learning_rate * (decay_rate ** (epoch // step_size)), LEARNING_RATE_CLIP)
@@ -322,6 +326,17 @@ if __name__ == '__main__':
         log_string('Spending Time: %f' % spd_time)
         log_string('Eval mean loss: %f' % (loss_sum / num_batches))
         log_string('Eval accuracy: %f' % (total_correct / float(total_seen)))
+        logger.info('Save model...')
+        savepath = str(checkpoints_dir) + '/state_dict.pth'
+        log_string('Saving at %s' % savepath)
+        state = {
+                'epoch': epoch,
+                'class_avg_iou': mIoU,
+                'model_state_dict': classifier.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+            }
+        torch.save(state, savepath)
+        log_string('Saving model....')
         if mIoU >= best_iou:
             best_iou = mIoU
             logger.info('Save model...')

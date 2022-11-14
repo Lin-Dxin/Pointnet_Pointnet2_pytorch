@@ -13,11 +13,11 @@ class CarlaDataset(Dataset):
 
     def __init__(self, carla_dir, transform=None, split='train', proportion=[0.7, 0.2, 0.1],
                  num_classes=5, sample_rate=0.1, numpoints=1024 * 8, need_speed=True,
-                 block_size=1.0):
+                 block_size=1.0, resample=True,random_sample=True):
         
         self.split = split  # 区分训练集或者测试集（当数据按文件划分后，可以用whole读取所有数据
         self.proportion = proportion  # 数据划分比例
-
+        self.random_sample = random_sample
         # rootpath = os.path.abspath('..')
         self.num_classes = num_classes  # 语义类别数
         self.block_size = block_size  # 用于重采样的重采样块大小
@@ -46,27 +46,39 @@ class CarlaDataset(Dataset):
         self.file_list = all_file
         self.file_len = len(all_file)
         # 只读取文件，不保存： 记录点数、初始化权重、标准化
-        num_all_point = []
-        for file_name in all_file:
-            path = os.path.join(self.carla_dir, file_name)
-            data = np.load(path, allow_pickle=True)
-            num_all_point.append(len(data))  # 记录点云数
-
-        sample_prob = num_all_point / np.sum(num_all_point)  # 单帧中包含的点云数占所有帧的数据点云数的比例
-        num_iter = int(np.sum(num_all_point) * sample_rate / numpoints)  
         room_idxs = []
-        for index in range(self.file_len):
-            room_idxs.extend([index] * int(round((sample_prob[index]) * num_iter)))  
-            #  对点云数多的帧进行重采样（room_idx用于遍历所有数据，重采样可能后会重复采点云数较多的某一帧）
-            #  例子：0,0,1,2,2,2……  在该例子中  1号帧点云数 < 0号帧点云数 < 3号帧点云数
-            #  后续DataLoader遍历过程中会多次采样0号帧以及3号帧
+        if resample == True:
+            room_idxs = [i for i in range(len(all_file))]
+        else:
+            # resample 重采样操作
+            num_all_point = []
+            for file_name in all_file:
+                path = os.path.join(self.carla_dir, file_name)
+                if path[-3:] == 'npz':
+                    data = np.load(path, allow_pickle=True)['arr_0']
+                else:
+                    data = np.load(path, allow_pickle=True)
+                # data = np.load(path, allow_pickle=True)
+                num_all_point.append(len(data))  # 记录点云数
+
+            sample_prob = num_all_point / np.sum(num_all_point)  # 单帧中包含的点云数占所有帧的数据点云数的比例
+            num_iter = int(np.sum(num_all_point) * sample_rate / numpoints)  
+            room_idxs = []
+            for index in range(self.file_len):
+                room_idxs.extend([index] * int(round((sample_prob[index]) * num_iter)))  
+                #  对点云数多的帧进行重采样（room_idx用于遍历所有数据，重采样可能后会重复采点云数较多的某一帧）
+                #  例子：0,0,1,2,2,2……  在该例子中  1号帧点云数 < 0号帧点云数 < 3号帧点云数
+                #  后续DataLoader遍历过程中会多次采样0号帧以及3号帧
         self.room_idxs = np.array(room_idxs)
         print("Totally {} samples in {} set.".format(len(self.room_idxs), split))
 
     def __getitem__(self, idx):
         room_idx = self.room_idxs[idx]
         roompath = os.path.join(self.carla_dir, self.file_list[room_idx])
-        raw_data = np.load(roompath)
+        if roompath[-3:] == 'npz':
+            raw_data = np.load(roompath)['arr_0']
+        else:
+            raw_data = np.load(roompath)
         point = []
         label = []
         for _raw in raw_data:
@@ -80,24 +92,27 @@ class CarlaDataset(Dataset):
         label = np.asarray(label)
         N_points = len(label)
         cnt = 0
-        while True:
-            # 对一帧内的点进行随机采样
-            # 随机选择三个点，并在三个点的周围划定区域，Block_Size决定了区域大小
-            # 最终输出数据为Block内的点云
-            center = point[np.random.choice(N_points)][:3]
-            block_min = center - [self.block_size / 2.0, self.block_size / 2.0, 0]
-            block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
-            point_idxs = np.where(
-                (point[:, 0] >= block_min[0]) & (point[:, 0] <= block_max[0]) & (point[:, 1] >= block_min[1]) & (
-                        point[:, 1] <= block_max[1]))[0]
-            # print(point_idxs.size)
-            cnt += 1
-            # print(cnt)
-            if point_idxs.size > 1024 or cnt > 100:
-                # print("success! with cnt:")
+        if self.random_sample:
+
+            while True:
+                # 对一帧内的点进行随机采样
+                # 随机选择三个点，并在三个点的周围划定区域，Block_Size决定了区域大小
+                # 最终输出数据为Block内的点云
+                center = point[np.random.choice(N_points)][:3]
+                block_min = center - [self.block_size / 2.0, self.block_size / 2.0, 0]
+                block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
+                point_idxs = np.where(
+                    (point[:, 0] >= block_min[0]) & (point[:, 0] <= block_max[0]) & (point[:, 1] >= block_min[1]) & (
+                            point[:, 1] <= block_max[1]))[0]
+                # print(point_idxs.size)
+                cnt += 1
                 # print(cnt)
-                break
-        
+                if point_idxs.size > 1024 or cnt > 100:
+                    # print("success! with cnt:")
+                    # print(cnt)
+                    break
+        else:
+            point_idxs = np.array([i for i in range(len(label))])
         if point_idxs.size >= self.numpoints:
             selected_point_idxs = np.random.choice(point_idxs, self.numpoints, replace=False)
         else:
