@@ -158,7 +158,11 @@ if __name__ == '__main__':
     if LOAD_INIT:
         checkpoint = torch.load(model_path,map_location = device)
         classifier.load_state_dict(checkpoint['model_state_dict'])
-        state_epoch = checkpoint['epoch']
+        if checkpoint.has_key('epoch'):
+            state_epoch = checkpoint['epoch']
+        else:
+            state_epoch = 0
+        
     else:
         state_epoch = 0
         def weights_init(m):
