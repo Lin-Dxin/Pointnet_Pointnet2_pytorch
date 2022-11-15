@@ -33,13 +33,16 @@ LOAD_INIT = json_data['LOAD_INIT']  # 不能与Save_Init相同
 DATA_RESAMPLE = json_data['DATA_RESAMPLE']
 if K_FOLD:
     
-    partition = 0 # 0 - 9
+    partition = json_data['partition'] # 0 - 9
     partition_str = str(partition)
-    train_data_dir = './data/carla_scene_01/TrainAndValidateData_'+ partition_str+ '/train'  
+    train_data_dir_pre = json_data['train_data_dir_pre']
+    train_data_dir = train_data_dir_pre + partition_str+ '/train'  
     # 需要有TrainAndValidateData_0、TrainAndValidateData_1 …… TrainAndValidateData_9 十个文件夹存放各个分布的数据
-    validate_data_dir = './data/carla_scene_01/TrainAndValidateData_'+ partition_str+ '/validate'
+    validate_data_dir_pre = json_data['validate_data_dir_pre']
+    validate_data_dir = validate_data_dir_pre + partition_str+ '/validate'
     # model_info需要自己修改成对应的实验标题
-    model_info = '4D_pn_part' + partition_str  # 最好能区分是否4D数据、使用pn或者pn++ 例：3D_pn2_part
+    model_info_pre = json_data['model_info_pre']
+    model_info =  model_info_pre + partition_str  # 最好能区分是否4D数据、使用pn或者pn++ 例：3D_pn2_part
     # 不用自行添加partition，已经记录下来了
 
 
