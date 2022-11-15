@@ -13,17 +13,17 @@ from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 
 TRANS_LABEL = True
-_carla_dir = 'data/carla_scene_02_unnorm'  # 若不使用Kflod则该目录为主
+_carla_dir = 'data/carla_scene_02'  # 若不使用Kflod则该目录为主
 NEED_SPEED = True
 TSB_RECORD = True
 Model = "pointnet"
 epoch_num = 25
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-model_path = './4D_pn2_initial_state.pth'  # 需要一个初始化模型
+model_path = './normalize_comparison.pth'  # 需要一个初始化模型
 K_FOLD = False
 SAVE_INIT = False  # 将这个选项设为True、Load_Init设为False 可以在log/checkpoint/初始化生成一个initial_state.pth的初始化模型
-LOAD_INIT = False  # 不能与Save_Init相同
+LOAD_INIT = True  # 不能与Save_Init相同
 DATA_RESAMPLE = True
 if K_FOLD:
     
@@ -148,7 +148,7 @@ if __name__ == '__main__':
     
     if LOAD_INIT:
         checkpoint = torch.load(model_path,map_location = device)
-        classifier = classifier.load_state_dict(checkpoint['model_state_dict'])
+        classifier.load_state_dict(checkpoint['model_state_dict'])
         state_epoch = checkpoint['epoch']
     else:
         state_epoch = 0
@@ -166,6 +166,7 @@ if __name__ == '__main__':
     if SAVE_INIT is True:
         initial_state = {
                 'model_state_dict': classifier.state_dict(),
+                'epoch':0
             }
         init_savepath = str(checkpoints_dir) + '/initial_state.pth'
         torch.save(initial_state, init_savepath)
@@ -173,7 +174,7 @@ if __name__ == '__main__':
         log_string('Shuting down')
         sys.exit()
         
-
+    classifier.to(device)
     criterion = get_loss().to(device)  # loss function
     classifier.apply(inplace_relu)
     learning_rate = 0.001
@@ -194,7 +195,9 @@ if __name__ == '__main__':
         weight_decay=decay_rate
     )
 
-
+    if LOAD_INIT:
+        if state_epoch != 0:
+            optimizer = optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     def bn_momentum_adjust(m, momentum):
         if isinstance(m, torch.nn.BatchNorm2d) or isinstance(m, torch.nn.BatchNorm1d):
             m.momentum = momentum

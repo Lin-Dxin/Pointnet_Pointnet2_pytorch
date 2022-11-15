@@ -47,7 +47,7 @@ class CarlaDataset(Dataset):
         self.file_len = len(all_file)
         # 只读取文件，不保存： 记录点数、初始化权重、标准化
         room_idxs = []
-        if resample == True:
+        if resample == False:
             room_idxs = [i for i in range(len(all_file))]
         else:
             # resample 重采样操作
