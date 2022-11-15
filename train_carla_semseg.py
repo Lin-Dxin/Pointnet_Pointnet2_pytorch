@@ -11,20 +11,26 @@ import sys
 import logging
 from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
+import json
 
-TRANS_LABEL = True
-_carla_dir = 'data/carla_scene_02'  # 若不使用Kflod则该目录为主
-NEED_SPEED = True
-TSB_RECORD = True
-Model = "pointnet"
-epoch_num = 25
+with open('semseg_config.json') as f:
+  json_data = json.load(f)
+
+print(json_data)
+
+TRANS_LABEL = json_data['TRANS_LABEL'] # 是否使用原标签
+_carla_dir = json_data['_carla_dir'] # 若不使用Kflod则该目录为主
+NEED_SPEED = json_data['NEED_SPEED'] # 是否使用4D数据
+TSB_RECORD = json_data['TSB_RECORD'] # 是否使用Tensorboard记录实验过程
+Model = json_data['Model'] # 使用的模型 pointnet / pointnet2
+epoch_num = json_data['epoch_num'] # 设定epoch数
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-model_path = './normalize_comparison.pth'  # 需要一个初始化模型
-K_FOLD = False
-SAVE_INIT = False  # 将这个选项设为True、Load_Init设为False 可以在log/checkpoint/初始化生成一个initial_state.pth的初始化模型
-LOAD_INIT = True  # 不能与Save_Init相同
-DATA_RESAMPLE = True
+model_path = json_data['model_path']  # 需要一个初始化模型
+K_FOLD = json_data['K_FOLD'] # 是否使用KFLOD训练
+SAVE_INIT = json_data['SAVE_INIT'] # 将这个选项设为True、Load_Init设为False 可以在log/checkpoint/初始化生成一个initial_state.pth的初始化模型
+LOAD_INIT = json_data['LOAD_INIT']  # 不能与Save_Init相同
+DATA_RESAMPLE = json_data['DATA_RESAMPLE']
 if K_FOLD:
     
     partition = 0 # 0 - 9
