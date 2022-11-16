@@ -31,7 +31,7 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
-
+*.json
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
@@ -119,4 +119,3 @@ dmypy.json
 # Pyre type checker
 .pyre/
 carla_seg.txt
-*.json
