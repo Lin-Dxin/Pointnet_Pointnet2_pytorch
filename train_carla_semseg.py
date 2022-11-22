@@ -16,7 +16,7 @@ import json
 with open('semseg_config.json') as f:
   json_data = json.load(f)
 
-# print(json_data)
+
 
 TRANS_LABEL = json_data['TRANS_LABEL'] # 是否使用原标签
 _carla_dir = json_data['_carla_dir'] # 若不使用Kflod则该目录为主
@@ -30,7 +30,7 @@ model_path = json_data['model_path']  # 需要一个初始化模型
 K_FOLD = json_data['K_FOLD'] # 是否使用KFLOD训练
 SAVE_INIT = json_data['SAVE_INIT'] # 将这个选项设为True、Load_Init设为False 可以在log/checkpoint/初始化生成一个initial_state.pth的初始化模型
 LOAD_INIT = json_data['LOAD_INIT']  # 不能与Save_Init相同
-DATA_RESAMPLE = json_data['DATA_RESAMPLE']  # 是否进行重采样（数据增强）
+DATA_RESAMPLE = json_data['DATA_RESAMPLE']
 if K_FOLD:
     
     partition = json_data['partition'] # 0 - 9
@@ -154,15 +154,14 @@ if __name__ == '__main__':
 
         
     classifier = get_model(numclass, need_speed=NEED_SPEED).to(device)  # loading model\
-    
+    log_string(json_data)
     if LOAD_INIT:
         checkpoint = torch.load(model_path,map_location = device)
         classifier.load_state_dict(checkpoint['model_state_dict'])
-        if checkpoint.has_key('epoch'):
+        if checkpoint.__contains__('epoch'):
             state_epoch = checkpoint['epoch']
         else:
             state_epoch = 0
-        
     else:
         state_epoch = 0
         def weights_init(m):
